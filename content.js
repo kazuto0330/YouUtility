@@ -132,6 +132,12 @@ function pinPlayer() {
   if (isPinnedActive) return;
   if (!playerReference || !parentReference) return;
 
+  // Check if video is loaded to prevent sizing issues
+  const videoElement = playerReference.querySelector('video');
+  if (videoElement && videoElement.readyState === 0) {
+    return;
+  }
+
   // 1. Insert placeholder to maintain height
   // We set explicit height based on current player height
   const rect = playerReference.getBoundingClientRect();
