@@ -14,31 +14,37 @@
 
     <main>
       <section class="card">
-        <h2>General</h2>
+        <h2 data-i18n="general">General</h2>
         
         <div class="setting-row">
-          <label for="pin-toggle">Enable Pin Player</label>
-          <label class="switch">
-            <input type="checkbox" id="pin-toggle">
-            <span class="slider round"></span>
-          </label>
+          <label data-i18n="language">Language</label>
+          <select id="lang-select">
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
         </div>
 
         <div class="setting-row">
-          <label>Theme</label>
+          <label data-i18n="theme">Theme</label>
           <select id="theme-select">
-            <option value="system">System Default</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
+            <option value="system" data-i18n="themeSystem">System Default</option>
+            <option value="light" data-i18n="themeLight">Light</option>
+            <option value="dark" data-i18n="themeDark">Dark</option>
           </select>
         </div>
       </section>
 
       <section class="card">
-        <h2>Player Appearance</h2>
+        <div class="section-header">
+          <h2 data-i18n="playerAppearance">Player Appearance</h2>
+          <label class="switch">
+            <input type="checkbox" id="pin-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
         
         <div class="setting-group">
-          <label>Position</label>
+          <label data-i18n="position">Position</label>
           <div class="position-grid">
             <button class="pos-btn" data-pos="top-left" aria-label="Top Left"></button>
             <button class="pos-btn" data-pos="top-right" aria-label="Top Right"></button>
@@ -48,7 +54,7 @@
         </div>
 
         <div class="setting-group">
-          <label for="size-input">Size (Width in px)</label>
+          <label for="size-input" data-i18n="size">Size (Width in px)</label>
           <div class="input-wrapper">
             <input type="number" id="size-input" min="200" max="1000" step="10">
             <span>px</span>

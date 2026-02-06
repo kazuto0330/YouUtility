@@ -55,6 +55,21 @@ header h1 {
   padding-bottom: 10px;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+}
+
+.section-header h2 {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
 .setting-row {
   display: flex;
   justify-content: space-between;
@@ -165,4 +180,3 @@ input[type="range"] {
   background-color: rgba(0, 113, 227, 0.1);
 }
 .pos-btn.active::after { background-color: var(--primary-color); }
-
