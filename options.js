@@ -2,8 +2,8 @@ const DEFAULT_SETTINGS = {
   isPinned: true,
   position: 'top-right',
   size: 500,
-  theme: 'system',
-  lang: 'en'
+  theme: 'system'
+  // lang is handled dynamically if not present
 };
 
 const TRANSLATIONS = {
@@ -42,7 +42,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load Settings
   chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang'], (result) => {
-    const settings = { ...DEFAULT_SETTINGS, ...result };
+    // Determine Language
+    let lang = result.lang;
+    if (!lang) {
+      const browserLang = navigator.language || navigator.userLanguage; 
+      lang = browserLang.startsWith('ja') ? 'ja' : 'en';
+    }
+
+    const settings = { ...DEFAULT_SETTINGS, lang, ...result };
+    // Ensure we save the detected lang if it wasn't there
+    if (!result.lang) {
+        chrome.storage.local.set({ lang });
+    }
     
     // Apply to UI
     pinToggle.checked = settings.isPinned;
@@ -122,13 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveAndSync(data) {
     chrome.storage.local.set(data);
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].url.includes("youtube.com")) {
-        chrome.tabs.sendMessage(tabs[0].id, {
+    // Send to ALL YouTube tabs
+    chrome.tabs.query({ url: "*://www.youtube.com/*" }, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
           action: "updateSettings",
           settings: data
         });
-      }
+      });
     });
   }
 });
