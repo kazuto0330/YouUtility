@@ -1,0 +1,11 @@
+.you-utility-pinned {
+  position: fixed !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 30vw !important;
+  height: auto !important;
+  aspect-ratio: 16 / 9 !important;
+  z-index: 2147483647 !important; /* Max z-index */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+  border: 2px solid #fff !important;
+}
