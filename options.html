@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouUtility Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>YouUtility Settings</h1>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>General</h2>
+        
+        <div class="setting-row">
+          <label for="pin-toggle">Enable Pin Player</label>
+          <label class="switch">
+            <input type="checkbox" id="pin-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <label>Theme</label>
+          <select id="theme-select">
+            <option value="system">System Default</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Player Appearance</h2>
+        
+        <div class="setting-group">
+          <label>Position</label>
+          <div class="position-grid">
+            <button class="pos-btn" data-pos="top-left" aria-label="Top Left"></button>
+            <button class="pos-btn" data-pos="top-right" aria-label="Top Right"></button>
+            <button class="pos-btn" data-pos="bottom-left" aria-label="Bottom Left"></button>
+            <button class="pos-btn" data-pos="bottom-right" aria-label="Bottom Right"></button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label for="size-input">Size (Width in px)</label>
+          <div class="input-wrapper">
+            <input type="number" id="size-input" min="200" max="1000" step="10">
+            <span>px</span>
+          </div>
+          <input type="range" id="size-slider" min="200" max="1000" step="10">
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>

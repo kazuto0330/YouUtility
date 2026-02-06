@@ -1,8 +1,18 @@
+:root {
+  --yu-width: 30vw;
+  --yu-top: auto;
+  --yu-bottom: auto;
+  --yu-left: auto;
+  --yu-right: auto;
+}
+
 .you-utility-pinned {
   position: fixed !important;
-  top: 10px !important;
-  right: 10px !important;
-  width: 30vw !important;
+  top: var(--yu-top) !important;
+  bottom: var(--yu-bottom) !important;
+  left: var(--yu-left) !important;
+  right: var(--yu-right) !important;
+  width: var(--yu-width) !important;
   height: auto !important;
   aspect-ratio: 16 / 9 !important;
   z-index: 2147483647 !important; /* Max z-index */
