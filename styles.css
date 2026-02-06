@@ -32,3 +32,8 @@
   top: 0 !important;
   left: 0 !important;
 }
+
+.you-utility-pinned .ytp-chrome-bottom {
+  width: 100% !important;
+  left: 0 !important;
+}
