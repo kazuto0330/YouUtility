@@ -150,6 +150,7 @@ function pinPlayer() {
   playerReference.classList.add("you-utility-pinned");
   
   isPinnedActive = true;
+  window.dispatchEvent(new Event('resize'));
 }
 
 function unpinPlayer() {
@@ -170,4 +171,5 @@ function unpinPlayer() {
 
   playerReference.classList.remove("you-utility-pinned");
   isPinnedActive = false;
+  window.dispatchEvent(new Event('resize'));
 }
