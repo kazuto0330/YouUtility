@@ -19,7 +19,9 @@ let dragData = {
     startX: 0,
     startY: 0,
     initialLeft: 0,
-    initialTop: 0
+    initialTop: 0,
+    hasMoved: false,
+    isClickSuppressed: false
 };
 
 // Apply settings on load
@@ -163,6 +165,8 @@ function onMouseDown(e) {
     }
 
     dragData.isDragging = true;
+    dragData.hasMoved = false; // Reset move flag
+    dragData.isClickSuppressed = false; // Reset suppression
     dragData.startX = e.clientX;
     dragData.startY = e.clientY;
     
@@ -180,6 +184,11 @@ function onMouseMove(e) {
     const dx = e.clientX - dragData.startX;
     const dy = e.clientY - dragData.startY;
 
+    // Only start moving if dragged more than 5px to prevent accidental micro-moves
+    if (!dragData.hasMoved && Math.hypot(dx, dy) < 5) return;
+    
+    dragData.hasMoved = true;
+
     // Set styles directly with !important to override class styles during drag
     playerReference.style.setProperty('top', `${dragData.initialTop + dy}px`, 'important');
     playerReference.style.setProperty('left', `${dragData.initialLeft + dx}px`, 'important');
@@ -189,36 +198,51 @@ function onMouseMove(e) {
 
 function onMouseUp(e) {
     if (!dragData.isDragging) return;
-    dragData.isDragging = false;
-
-    // Calculate quadrant
-    const rect = playerReference.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
     
-    const winWidth = window.innerWidth;
-    const winHeight = window.innerHeight;
+    // If we moved, suppress the subsequent click event
+    if (dragData.hasMoved) {
+        dragData.isClickSuppressed = true;
+        
+        // Calculate quadrant
+        const rect = playerReference.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        const winWidth = window.innerWidth;
+        const winHeight = window.innerHeight;
 
-    let newPosition = '';
-    if (centerY < winHeight / 2) {
-        // Top
-        newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
-    } else {
-        // Bottom
-        newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
+        let newPosition = '';
+        if (centerY < winHeight / 2) {
+            // Top
+            newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
+        } else {
+            // Bottom
+            newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
+        }
+
+        // Update settings
+        currentSettings.position = newPosition;
+        chrome.storage.local.set({ position: newPosition });
+
+        // Remove inline styles to let applySettings take over
+        playerReference.style.removeProperty('top');
+        playerReference.style.removeProperty('left');
+        playerReference.style.removeProperty('bottom');
+        playerReference.style.removeProperty('right');
+        
+        applySettings(currentSettings);
     }
-
-    // Update settings
-    currentSettings.position = newPosition;
-    chrome.storage.local.set({ position: newPosition });
-
-    // Remove inline styles to let applySettings take over
-    playerReference.style.removeProperty('top');
-    playerReference.style.removeProperty('left');
-    playerReference.style.removeProperty('bottom');
-    playerReference.style.removeProperty('right');
     
-    applySettings(currentSettings);
+    dragData.isDragging = false;
+}
+
+function onClick(e) {
+    if (dragData.isClickSuppressed) {
+        e.preventDefault();
+        e.stopPropagation();
+        dragData.isClickSuppressed = false; // Reset after suppressing one click
+        return false;
+    }
 }
 
 function pinPlayer() {
@@ -248,6 +272,8 @@ function pinPlayer() {
 
   // 4. Add Drag Listeners
   playerReference.addEventListener('mousedown', onMouseDown);
+  // Use capture phase for click to intercept it before YouTube handles it
+  playerReference.addEventListener('click', onClick, true); 
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
 
@@ -261,6 +287,7 @@ function unpinPlayer() {
 
   // 1. Remove Drag Listeners
   playerReference.removeEventListener('mousedown', onMouseDown);
+  playerReference.removeEventListener('click', onClick, true);
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
 

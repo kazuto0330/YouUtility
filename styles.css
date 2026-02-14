@@ -41,11 +41,11 @@
 /* Close Button */
 .you-utility-close-btn {
   position: absolute;
-  top: -12px;
-  right: -12px;
+  top: 8px;
+  right: 8px;
   width: 24px;
   height: 24px;
-  background-color: #ff0000;
+  background-color: rgba(0, 0, 0, 0.6);
   color: white;
   border: 2px solid white;
   border-radius: 50%;
@@ -65,12 +65,12 @@
   display: flex;
 }
 
-/* Dragging Cursor */
+/* Dragging Cursor - Override to default per user request */
 .you-utility-pinned {
-  cursor: move;
+  cursor: default;
 }
 
-/* Prevent drag on controls */
+/* Prevent drag on controls and ensure they keep their cursors */
 .you-utility-pinned .ytp-chrome-bottom, 
 .you-utility-pinned .ytp-chrome-top,
 .you-utility-pinned .ytp-gradient-bottom,
@@ -78,4 +78,10 @@
 .you-utility-pinned .ytp-bezel,
 .you-utility-pinned .ytp-popup {
     cursor: default;
+}
+
+/* Restore pointer cursor for interactive elements within controls */
+.you-utility-pinned .ytp-button,
+.you-utility-pinned .ytp-progress-bar-container {
+    cursor: pointer !important;
 }
