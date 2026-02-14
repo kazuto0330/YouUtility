@@ -65,6 +65,68 @@
   display: flex;
 }
 
+/* Save Button */
+.you-utility-save-btn {
+  position: fixed; /* Changed from absolute to fixed */
+  background-color: #065fd4;
+  color: white;
+  border: none;
+  border-radius: 2px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: Roboto, Arial, sans-serif;
+  cursor: pointer;
+  z-index: 2147483650; /* Higher than player */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none; /* Ignore clicks when invisible */
+  white-space: nowrap;
+  transform: translateX(-50%); /* Center horizontally relative to left */
+}
+
+.you-utility-save-btn.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.you-utility-save-btn:hover {
+  background-color: #0047a8;
+}
+
+/* Resize Handles */
+.you-utility-resize-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 2147483648;
+  background: transparent; /* Transparent but interactive */
+}
+
+.you-utility-resize-handle.top-left {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+.you-utility-resize-handle.top-right {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+.you-utility-resize-handle.bottom-left {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+.you-utility-resize-handle.bottom-right {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
+
 /* Dragging Cursor - Override to default per user request */
 .you-utility-pinned {
   cursor: default;

@@ -14,12 +14,20 @@ let playerReference = null; // Cache the player element
 let parentReference = null; // Cache the parent
 let userClosed = false; // Track if user manually closed the pinned player
 let closeButton = null;
+let saveButton = null;
+let saveTimeout = null;
+let resizeHandles = [];
+
 let dragData = {
     isDragging: false,
+    isResizing: false,
+    resizeCorner: null, // 'top-left', 'top-right', 'bottom-left', 'bottom-right'
     startX: 0,
     startY: 0,
     initialLeft: 0,
     initialTop: 0,
+    initialWidth: 0,
+    initialHeight: 0,
     hasMoved: false,
     isClickSuppressed: false
 };
@@ -151,59 +159,182 @@ function createCloseButton() {
     return btn;
 }
 
+function createSaveButton() {
+    const btn = document.createElement('button');
+    btn.className = 'you-utility-save-btn';
+    btn.textContent = '設定を保存';
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        saveSettings();
+    });
+    // Append to body instead of player to avoid clipping
+    document.body.appendChild(btn);
+    return btn;
+}
+
+function hideSaveButton() {
+    if (saveButton) {
+        saveButton.classList.remove('visible');
+    }
+}
+
+function showSaveButton() {
+    if (!saveButton) return;
+    if (!playerReference) return;
+
+    // Calculate position relative to the pinned player
+    const rect = playerReference.getBoundingClientRect();
+    const btnTop = rect.bottom + 10; // 10px below player
+    const btnLeft = rect.left + rect.width / 2; // Center horizontally
+
+    saveButton.style.top = `${btnTop}px`;
+    saveButton.style.left = `${btnLeft}px`;
+    
+    saveButton.classList.add('visible');
+    saveButton.textContent = '設定を保存'; // Reset text
+    
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+        saveButton.classList.remove('visible');
+    }, 5000);
+}
+
+function saveSettings() {
+    // Save current settings to storage
+    chrome.storage.local.set({
+        size: currentSettings.size,
+        position: currentSettings.position
+    }, () => {
+        if (saveButton) {
+            saveButton.textContent = '保存しました';
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveButton.classList.remove('visible');
+            }, 1000);
+        }
+    });
+}
+
+function createResizeHandles() {
+    const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    return corners.map(corner => {
+        const handle = document.createElement('div');
+        handle.className = `you-utility-resize-handle ${corner}`;
+        handle.dataset.corner = corner;
+        return handle;
+    });
+}
+
 function onMouseDown(e) {
     if (!isPinnedActive) return;
+
+    // Check for resize handle
+    if (e.target.classList.contains('you-utility-resize-handle')) {
+        dragData.isResizing = true;
+        dragData.resizeCorner = e.target.dataset.corner;
+    } 
     // Check if clicking controls
-    // Prevent dragging if interacting with controls
-    if (e.target.closest('.ytp-chrome-bottom') || 
+    else if (e.target.closest('.ytp-chrome-bottom') || 
         e.target.closest('.ytp-chrome-top') ||
         e.target.closest('.ytp-gradient-bottom') ||
         e.target.closest('.ytp-gradient-top') ||
         e.target.closest('.ytp-popup') || 
-        e.target.closest('.you-utility-close-btn')) {
+        e.target.closest('.you-utility-close-btn') ||
+        e.target.closest('.you-utility-save-btn')) {
         return;
+    } else {
+        dragData.isDragging = true;
     }
 
-    dragData.isDragging = true;
-    dragData.hasMoved = false; // Reset move flag
-    dragData.isClickSuppressed = false; // Reset suppression
+    // Hide save button immediately when interaction starts
+    hideSaveButton();
+
+    dragData.hasMoved = false; 
+    dragData.isClickSuppressed = false;
     dragData.startX = e.clientX;
     dragData.startY = e.clientY;
     
     const rect = playerReference.getBoundingClientRect();
     dragData.initialLeft = rect.left;
     dragData.initialTop = rect.top;
+    dragData.initialWidth = rect.width;
+    dragData.initialHeight = rect.height;
+
+    // Set styles to absolute pixels to allow free drag/resize
+    playerReference.style.setProperty('top', `${rect.top}px`, 'important');
+    playerReference.style.setProperty('left', `${rect.left}px`, 'important');
+    playerReference.style.setProperty('bottom', 'auto', 'important');
+    playerReference.style.setProperty('right', 'auto', 'important');
+    playerReference.style.setProperty('width', `${rect.width}px`, 'important');
 
     // Prevent text selection
     e.preventDefault();
 }
 
 function onMouseMove(e) {
-    if (!dragData.isDragging) return;
+    if (!dragData.isDragging && !dragData.isResizing) return;
 
     const dx = e.clientX - dragData.startX;
     const dy = e.clientY - dragData.startY;
 
-    // Only start moving if dragged more than 5px to prevent accidental micro-moves
+    // Threshold for move start
     if (!dragData.hasMoved && Math.hypot(dx, dy) < 5) return;
-    
     dragData.hasMoved = true;
 
-    // Set styles directly with !important to override class styles during drag
-    playerReference.style.setProperty('top', `${dragData.initialTop + dy}px`, 'important');
-    playerReference.style.setProperty('left', `${dragData.initialLeft + dx}px`, 'important');
-    playerReference.style.setProperty('bottom', 'auto', 'important');
-    playerReference.style.setProperty('right', 'auto', 'important');
+    if (dragData.isResizing) {
+        let newWidth = dragData.initialWidth;
+        let newLeft = dragData.initialLeft;
+        let newTop = dragData.initialTop;
+
+        // Aspect Ratio 16:9
+        const aspect = 16 / 9;
+
+        // Calculate new width based on corner
+        if (dragData.resizeCorner.includes('right')) {
+            newWidth = dragData.initialWidth + dx;
+        } else if (dragData.resizeCorner.includes('left')) {
+            newWidth = dragData.initialWidth - dx;
+        }
+
+        // Min width constraint (e.g., 200px)
+        if (newWidth < 200) newWidth = 200;
+
+        // Max width constraint (optional, e.g., window width)
+        if (newWidth > window.innerWidth - 40) newWidth = window.innerWidth - 40;
+
+        // Adjust Left position if dragging left side
+        if (dragData.resizeCorner.includes('left')) {
+            newLeft = dragData.initialLeft + (dragData.initialWidth - newWidth);
+        }
+
+        // Adjust Top position if dragging top side (to maintain aspect ratio)
+        if (dragData.resizeCorner.includes('top')) {
+             const newHeight = newWidth / aspect;
+             const heightDiff = newHeight - dragData.initialHeight;
+             newTop = dragData.initialTop - heightDiff;
+        }
+
+        playerReference.style.setProperty('width', `${newWidth}px`, 'important');
+        playerReference.style.setProperty('left', `${newLeft}px`, 'important');
+        playerReference.style.setProperty('top', `${newTop}px`, 'important');
+        // Height is auto (aspect-ratio)
+
+        // Update current setting temporarily for visual feedback if needed, 
+        // but main update happens on mouse up.
+    } else if (dragData.isDragging) {
+        playerReference.style.setProperty('top', `${dragData.initialTop + dy}px`, 'important');
+        playerReference.style.setProperty('left', `${dragData.initialLeft + dx}px`, 'important');
+    }
 }
 
 function onMouseUp(e) {
-    if (!dragData.isDragging) return;
+    if (!dragData.isDragging && !dragData.isResizing) return;
     
-    // If we moved, suppress the subsequent click event
+    // If we moved/resized
     if (dragData.hasMoved) {
         dragData.isClickSuppressed = true;
         
-        // Calculate quadrant
+        // 1. Calculate new Quadrant (Position)
         const rect = playerReference.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -213,27 +344,40 @@ function onMouseUp(e) {
 
         let newPosition = '';
         if (centerY < winHeight / 2) {
-            // Top
             newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
         } else {
-            // Bottom
             newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
         }
 
-        // Update settings
+        // 2. Update Settings Object (BUT DO NOT SAVE TO STORAGE YET)
         currentSettings.position = newPosition;
-        chrome.storage.local.set({ position: newPosition });
+        if (dragData.isResizing) {
+            currentSettings.size = rect.width;
+        }
 
-        // Remove inline styles to let applySettings take over
+        // 3. Remove inline styles so applySettings can take over with standard margins
         playerReference.style.removeProperty('top');
         playerReference.style.removeProperty('left');
         playerReference.style.removeProperty('bottom');
         playerReference.style.removeProperty('right');
+        playerReference.style.removeProperty('width'); // Remove explicit width to use var
         
+        // 4. Apply Settings (Snaps to nearest corner with updated size)
         applySettings(currentSettings);
+        
+        // 5. Show Save Button (Since it's fixed position, it will calculate based on new position)
+        // Give a slight delay for layout to settle
+        requestAnimationFrame(() => {
+            showSaveButton();
+        });
+        
+        // 6. Trigger Resize Event to fix internal player layout
+        window.dispatchEvent(new Event('resize'));
     }
     
     dragData.isDragging = false;
+    dragData.isResizing = false;
+    dragData.resizeCorner = null;
 }
 
 function onClick(e) {
@@ -249,17 +393,14 @@ function pinPlayer() {
   if (isPinnedActive) return;
   if (!playerReference || !parentReference) return;
 
-  // Check if video is loaded to prevent sizing issues
   const videoElement = playerReference.querySelector('video');
   if (videoElement && videoElement.readyState === 0) {
     return;
   }
 
-  // 1. Insert placeholder to maintain height
-  // We set explicit height based on current player height
+  // 1. Insert placeholder
   const rect = playerReference.getBoundingClientRect();
   placeholder.style.height = `${rect.height}px`;
-  // Insert placeholder where player is to preserve layout order
   parentReference.insertBefore(placeholder, playerReference);
 
   // 2. Move player to body
@@ -270,9 +411,18 @@ function pinPlayer() {
   if (!closeButton) closeButton = createCloseButton();
   playerReference.appendChild(closeButton);
 
-  // 4. Add Drag Listeners
+  // 4. Add Save Button
+  // Only create if not exists
+  if (!saveButton) {
+      saveButton = createSaveButton();
+  }
+
+  // 5. Add Resize Handles
+  resizeHandles = createResizeHandles();
+  resizeHandles.forEach(handle => playerReference.appendChild(handle));
+
+  // 6. Add Listeners
   playerReference.addEventListener('mousedown', onMouseDown);
-  // Use capture phase for click to intercept it before YouTube handles it
   playerReference.addEventListener('click', onClick, true); 
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
@@ -285,24 +435,35 @@ function unpinPlayer() {
   if (!isPinnedActive && !document.querySelector('.you-utility-pinned')) return;
   if (!playerReference || !parentReference) return;
 
-  // 1. Remove Drag Listeners
+  // 1. Remove Listeners
   playerReference.removeEventListener('mousedown', onMouseDown);
   playerReference.removeEventListener('click', onClick, true);
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
 
-  // 2. Remove Close Button
-  if (closeButton && closeButton.parentNode) {
-      closeButton.remove();
+  // 2. Remove Elements
+  if (closeButton && closeButton.parentNode) closeButton.remove();
+  
+  // Don't remove save button completely, just hide it, or remove it and recreate next time.
+  // Let's remove it to keep DOM clean.
+  if (saveButton && saveButton.parentNode) {
+      saveButton.remove();
+      saveButton = null; // Reset reference so it's recreated
   }
+  
+  resizeHandles.forEach(handle => {
+      if (handle.parentNode) handle.remove();
+  });
+  resizeHandles = [];
 
-  // 3. Clean up any inline styles from drag
+  // 3. Clean up styles
   playerReference.style.removeProperty('top');
   playerReference.style.removeProperty('left');
   playerReference.style.removeProperty('bottom');
   playerReference.style.removeProperty('right');
+  playerReference.style.removeProperty('width');
 
-  // 4. Move player back to parent
+  // 4. Move player back
   if (placeholder.parentNode === parentReference) {
       parentReference.insertBefore(playerReference, placeholder);
       placeholder.remove();
