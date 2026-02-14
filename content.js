@@ -184,9 +184,40 @@ function showSaveButton() {
 
     // Calculate position relative to the pinned player
     const rect = playerReference.getBoundingClientRect();
-    const btnTop = rect.bottom + 10; // 10px below player
-    const btnLeft = rect.left + rect.width / 2; // Center horizontally
+    const btnRect = saveButton.getBoundingClientRect(); // Get button dimensions
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
 
+    let btnTop, btnLeft;
+    const margin = 12;
+
+    // Determine Vertical Position (Top/Bottom)
+    // If player is in the top half, button goes below.
+    // If player is in the bottom half, button goes above.
+    const isTopHalf = (rect.top + rect.height / 2) < (winHeight / 2);
+
+    if (isTopHalf) {
+        // Place below
+        btnTop = rect.bottom + margin;
+    } else {
+        // Place above
+        btnTop = rect.top - btnRect.height - margin;
+    }
+
+    // Determine Horizontal Position (Left/Right)
+    // If player is in the left half, align left.
+    // If player is in the right half, align right.
+    const isLeftHalf = (rect.left + rect.width / 2) < (winWidth / 2);
+
+    if (isLeftHalf) {
+        // Align Left
+        btnLeft = rect.left;
+    } else {
+        // Align Right
+        btnLeft = rect.right - btnRect.width;
+    }
+
+    // Apply Styles
     saveButton.style.top = `${btnTop}px`;
     saveButton.style.left = `${btnLeft}px`;
     

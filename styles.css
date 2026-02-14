@@ -16,8 +16,10 @@
   height: auto !important;
   aspect-ratio: 16 / 9 !important;
   z-index: 2147483647 !important; /* Max z-index */
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
-  border: 2px solid #fff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important; /* Stronger shadow for pinned player */
+  border: 2px solid rgba(255, 255, 255, 0.1) !important; /* Subtle border */
+  border-radius: 12px !important; /* Rounded corners for player */
+  overflow: hidden !important; /* Clip content to rounded corners */
 }
 
 .you-utility-pinned .html5-video-container {
@@ -43,46 +45,56 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
   color: white;
-  border: 2px solid white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   font-family: sans-serif;
   font-weight: bold;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   display: none;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 2147483648; /* Above player z-index */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  transition: background-color 0.2s, transform 0.1s;
 }
 
 .you-utility-pinned:hover .you-utility-close-btn {
   display: flex;
 }
 
-/* Save Button */
+.you-utility-close-btn:hover {
+  background-color: rgba(204, 0, 0, 0.9);
+  transform: scale(1.1);
+  border-color: transparent;
+}
+
+/* Save Button - Modern Design */
 .you-utility-save-btn {
-  position: fixed; /* Changed from absolute to fixed */
-  background-color: #065fd4;
-  color: white;
+  position: fixed;
+  background-color: #3ea6ff; /* YouTube Blue */
+  color: #0f0f0f; /* Dark text for contrast on blue */
   border: none;
-  border-radius: 2px;
+  border-radius: 18px; /* Pill shape */
   padding: 8px 16px;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   font-family: Roboto, Arial, sans-serif;
   cursor: pointer;
-  z-index: 2147483650; /* Higher than player */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  z-index: 2147483650;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none; /* Ignore clicks when invisible */
+  transition: opacity 0.3s ease, transform 0.2s ease, background-color 0.2s;
+  pointer-events: none;
   white-space: nowrap;
-  transform: translateX(-50%); /* Center horizontally relative to left */
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .you-utility-save-btn.visible {
@@ -91,48 +103,54 @@
 }
 
 .you-utility-save-btn:hover {
-  background-color: #0047a8;
+  background-color: #65b8ff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+}
+
+.you-utility-save-btn:active {
+  transform: translateY(0);
 }
 
 /* Resize Handles */
 .you-utility-resize-handle {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   z-index: 2147483648;
-  background: transparent; /* Transparent but interactive */
+  background: transparent;
 }
 
 .you-utility-resize-handle.top-left {
-  top: -5px;
-  left: -5px;
+  top: -6px;
+  left: -6px;
   cursor: nwse-resize;
 }
 
 .you-utility-resize-handle.top-right {
-  top: -5px;
-  right: -5px;
+  top: -6px;
+  right: -6px;
   cursor: nesw-resize;
 }
 
 .you-utility-resize-handle.bottom-left {
-  bottom: -5px;
-  left: -5px;
+  bottom: -6px;
+  left: -6px;
   cursor: nesw-resize;
 }
 
 .you-utility-resize-handle.bottom-right {
-  bottom: -5px;
-  right: -5px;
+  bottom: -6px;
+  right: -6px;
   cursor: nwse-resize;
 }
 
-/* Dragging Cursor - Override to default per user request */
+/* Dragging Cursor */
 .you-utility-pinned {
   cursor: default;
 }
 
-/* Prevent drag on controls and ensure they keep their cursors */
+/* Prevent drag on controls */
 .you-utility-pinned .ytp-chrome-bottom, 
 .you-utility-pinned .ytp-chrome-top,
 .you-utility-pinned .ytp-gradient-bottom,
@@ -142,7 +160,7 @@
     cursor: default;
 }
 
-/* Restore pointer cursor for interactive elements within controls */
+/* Restore pointer cursor */
 .you-utility-pinned .ytp-button,
 .you-utility-pinned .ytp-progress-bar-container {
     cursor: pointer !important;
