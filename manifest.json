@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouUtility - Pin Player",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "YouTubeの動画プレイヤーをスクロール時に画面端に固定し、ながら見を快適にする拡張機能。",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {
