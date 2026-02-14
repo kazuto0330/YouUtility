@@ -8,9 +8,19 @@ const DEFAULT_SETTINGS = {
 let currentSettings = { ...DEFAULT_SETTINGS };
 let observer = null;
 let placeholder = null; // Used to hold space when pinned
+
 let isPinnedActive = false;
 let playerReference = null; // Cache the player element
 let parentReference = null; // Cache the parent
+let userClosed = false; // Track if user manually closed the pinned player
+let closeButton = null;
+let dragData = {
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialLeft: 0,
+    initialTop: 0
+};
 
 // Apply settings on load
 chrome.storage.local.get(['isPinned', 'position', 'size'], (result) => {
@@ -112,20 +122,103 @@ function cleanupObserver() {
 
 function handleIntersect(entries) {
   const entry = entries[0];
-  
-  // Pin if:
-  // 1. Feature enabled
-  // 2. Element is NOT intersecting (out of view)
-  // 3. Element is ABOVE the viewport (top < 0) - meaning we scrolled down
-  
   const isScrolledPast = entry.boundingClientRect.top < 0;
 
-  if (currentSettings.isPinned && !entry.isIntersecting && isScrolledPast) {
+  if (entry.isIntersecting) {
+      // Reset userClosed when player comes back into view
+      userClosed = false;
+      unpinPlayer();
+  } else if (currentSettings.isPinned && !entry.isIntersecting && isScrolledPast && !userClosed) {
     pinPlayer();
   } else {
-    // If it comes back into view (or we scroll up), unpin
-    unpinPlayer();
+    // If scrolled past but userClosed is true, ensure it's unpinned
+    if (userClosed) unpinPlayer();
   }
+}
+
+function createCloseButton() {
+    const btn = document.createElement('div');
+    btn.className = 'you-utility-close-btn';
+    btn.innerHTML = '&times;';
+    btn.title = 'ピン留め解除';
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent drag or other clicks
+        userClosed = true;
+        unpinPlayer();
+    });
+    return btn;
+}
+
+function onMouseDown(e) {
+    if (!isPinnedActive) return;
+    // Check if clicking controls
+    // Prevent dragging if interacting with controls
+    if (e.target.closest('.ytp-chrome-bottom') || 
+        e.target.closest('.ytp-chrome-top') ||
+        e.target.closest('.ytp-gradient-bottom') ||
+        e.target.closest('.ytp-gradient-top') ||
+        e.target.closest('.ytp-popup') || 
+        e.target.closest('.you-utility-close-btn')) {
+        return;
+    }
+
+    dragData.isDragging = true;
+    dragData.startX = e.clientX;
+    dragData.startY = e.clientY;
+    
+    const rect = playerReference.getBoundingClientRect();
+    dragData.initialLeft = rect.left;
+    dragData.initialTop = rect.top;
+
+    // Prevent text selection
+    e.preventDefault();
+}
+
+function onMouseMove(e) {
+    if (!dragData.isDragging) return;
+
+    const dx = e.clientX - dragData.startX;
+    const dy = e.clientY - dragData.startY;
+
+    // Set styles directly with !important to override class styles during drag
+    playerReference.style.setProperty('top', `${dragData.initialTop + dy}px`, 'important');
+    playerReference.style.setProperty('left', `${dragData.initialLeft + dx}px`, 'important');
+    playerReference.style.setProperty('bottom', 'auto', 'important');
+    playerReference.style.setProperty('right', 'auto', 'important');
+}
+
+function onMouseUp(e) {
+    if (!dragData.isDragging) return;
+    dragData.isDragging = false;
+
+    // Calculate quadrant
+    const rect = playerReference.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+
+    let newPosition = '';
+    if (centerY < winHeight / 2) {
+        // Top
+        newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
+    } else {
+        // Bottom
+        newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
+    }
+
+    // Update settings
+    currentSettings.position = newPosition;
+    chrome.storage.local.set({ position: newPosition });
+
+    // Remove inline styles to let applySettings take over
+    playerReference.style.removeProperty('top');
+    playerReference.style.removeProperty('left');
+    playerReference.style.removeProperty('bottom');
+    playerReference.style.removeProperty('right');
+    
+    applySettings(currentSettings);
 }
 
 function pinPlayer() {
@@ -149,6 +242,15 @@ function pinPlayer() {
   document.body.appendChild(playerReference);
   playerReference.classList.add("you-utility-pinned");
   
+  // 3. Add Close Button
+  if (!closeButton) closeButton = createCloseButton();
+  playerReference.appendChild(closeButton);
+
+  // 4. Add Drag Listeners
+  playerReference.addEventListener('mousedown', onMouseDown);
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+
   isPinnedActive = true;
   window.dispatchEvent(new Event('resize'));
 }
@@ -157,11 +259,23 @@ function unpinPlayer() {
   if (!isPinnedActive && !document.querySelector('.you-utility-pinned')) return;
   if (!playerReference || !parentReference) return;
 
-  // 1. Move player back to parent
-  // We insert it before placeholder (or just append if placeholder is only child)
-  // Best to just append to parent, then remove placeholder.
-  // BUT: Original position matters? usually player is the main child.
-  // We will insert before placeholder to be safe.
+  // 1. Remove Drag Listeners
+  playerReference.removeEventListener('mousedown', onMouseDown);
+  document.removeEventListener('mousemove', onMouseMove);
+  document.removeEventListener('mouseup', onMouseUp);
+
+  // 2. Remove Close Button
+  if (closeButton && closeButton.parentNode) {
+      closeButton.remove();
+  }
+
+  // 3. Clean up any inline styles from drag
+  playerReference.style.removeProperty('top');
+  playerReference.style.removeProperty('left');
+  playerReference.style.removeProperty('bottom');
+  playerReference.style.removeProperty('right');
+
+  // 4. Move player back to parent
   if (placeholder.parentNode === parentReference) {
       parentReference.insertBefore(playerReference, placeholder);
       placeholder.remove();

@@ -37,3 +37,45 @@
   width: 100% !important;
   left: 0 !important;
 }
+
+/* Close Button */
+.you-utility-close-btn {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 24px;
+  height: 24px;
+  background-color: #ff0000;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  font-family: sans-serif;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2147483648; /* Above player z-index */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.you-utility-pinned:hover .you-utility-close-btn {
+  display: flex;
+}
+
+/* Dragging Cursor */
+.you-utility-pinned {
+  cursor: move;
+}
+
+/* Prevent drag on controls */
+.you-utility-pinned .ytp-chrome-bottom, 
+.you-utility-pinned .ytp-chrome-top,
+.you-utility-pinned .ytp-gradient-bottom,
+.you-utility-pinned .ytp-gradient-top,
+.you-utility-pinned .ytp-bezel,
+.you-utility-pinned .ytp-popup {
+    cursor: default;
+}
