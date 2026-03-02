@@ -180,3 +180,37 @@ input[type="range"] {
   background-color: rgba(0, 113, 227, 0.1);
 }
 .pos-btn.active::after { background-color: var(--primary-color); }
+
+.mode-select {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: var(--bg-color);
+}
+
+.mode-btn.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+  font-weight: bold;
+}
+
+#position-setting.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}

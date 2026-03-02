@@ -75,7 +75,8 @@
 }
 
 /* Save Button - Modern Design */
-.you-utility-save-btn {
+.you-utility-save-btn,
+.you-utility-mode-toggle-btn {
   position: fixed;
   background-color: #3ea6ff; /* YouTube Blue */
   color: #0f0f0f; /* Dark text for contrast on blue */
@@ -97,19 +98,32 @@
   gap: 6px;
 }
 
-.you-utility-save-btn.visible {
+.you-utility-save-btn.visible,
+.you-utility-mode-toggle-btn.visible {
   opacity: 1;
   pointer-events: auto;
 }
 
-.you-utility-save-btn:hover {
+.you-utility-save-btn:hover,
+.you-utility-mode-toggle-btn:hover {
   background-color: #65b8ff;
   transform: translateY(-1px);
   box-shadow: 0 6px 14px rgba(0,0,0,0.4);
 }
 
-.you-utility-save-btn:active {
+.you-utility-save-btn:active,
+.you-utility-mode-toggle-btn:active {
   transform: translateY(0);
+}
+
+.you-utility-mode-toggle-btn {
+    background-color: #333;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.you-utility-mode-toggle-btn:hover {
+    background-color: #444;
 }
 
 /* Resize Handles */

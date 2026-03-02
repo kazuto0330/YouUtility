@@ -2,7 +2,9 @@
 const DEFAULT_SETTINGS = {
   isPinned: true,
   position: 'top-right',
-  size: 500
+  size: 500,
+  pinMode: 'corner', // 'corner' or 'free'
+  freePosition: { top: 100, left: 100 }
 };
 
 let currentSettings = { ...DEFAULT_SETTINGS };
@@ -15,6 +17,7 @@ let parentReference = null; // Cache the parent
 let userClosed = false; // Track if user manually closed the pinned player
 let closeButton = null;
 let saveButton = null;
+let modeToggleButton = null;
 let saveTimeout = null;
 let resizeHandles = [];
 
@@ -33,7 +36,7 @@ let dragData = {
 };
 
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'pinMode', 'freePosition'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
   // Give YT a moment to load the player
@@ -70,23 +73,28 @@ function applySettings(settings) {
   root.style.setProperty('--yu-left', 'auto');
   root.style.setProperty('--yu-right', 'auto');
 
-  switch (settings.position) {
-    case 'top-left':
-      root.style.setProperty('--yu-top', `${headerMargin}px`);
-      root.style.setProperty('--yu-left', `${baseMargin}px`);
-      break;
-    case 'top-right':
-      root.style.setProperty('--yu-top', `${headerMargin}px`);
-      root.style.setProperty('--yu-right', `${baseMargin}px`);
-      break;
-    case 'bottom-left':
-      root.style.setProperty('--yu-bottom', `${baseMargin}px`);
-      root.style.setProperty('--yu-left', `${baseMargin}px`);
-      break;
-    case 'bottom-right':
-      root.style.setProperty('--yu-bottom', `${baseMargin}px`);
-      root.style.setProperty('--yu-right', `${baseMargin}px`);
-      break;
+  if (settings.pinMode === 'free') {
+    root.style.setProperty('--yu-top', `${settings.freePosition.top}px`);
+    root.style.setProperty('--yu-left', `${settings.freePosition.left}px`);
+  } else {
+    switch (settings.position) {
+      case 'top-left':
+        root.style.setProperty('--yu-top', `${headerMargin}px`);
+        root.style.setProperty('--yu-left', `${baseMargin}px`);
+        break;
+      case 'top-right':
+        root.style.setProperty('--yu-top', `${headerMargin}px`);
+        root.style.setProperty('--yu-right', `${baseMargin}px`);
+        break;
+      case 'bottom-left':
+        root.style.setProperty('--yu-bottom', `${baseMargin}px`);
+        root.style.setProperty('--yu-left', `${baseMargin}px`);
+        break;
+      case 'bottom-right':
+        root.style.setProperty('--yu-bottom', `${baseMargin}px`);
+        root.style.setProperty('--yu-right', `${baseMargin}px`);
+        break;
+    }
   }
 }
 
@@ -159,6 +167,32 @@ function createCloseButton() {
     return btn;
 }
 
+function createModeToggleButton() {
+    const btn = document.createElement('button');
+    btn.className = 'you-utility-mode-toggle-btn';
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentSettings.pinMode = currentSettings.pinMode === 'corner' ? 'free' : 'corner';
+        
+        // If switching to free, use current rect as initial free position
+        if (currentSettings.pinMode === 'free') {
+            const rect = playerReference.getBoundingClientRect();
+            currentSettings.freePosition = { top: rect.top, left: rect.left };
+        }
+        
+        applySettings(currentSettings);
+        updateModeToggleButtonText();
+        showSaveButton(); // Reposition and refresh timer
+    });
+    document.body.appendChild(btn);
+    return btn;
+}
+
+function updateModeToggleButtonText() {
+    if (!modeToggleButton) return;
+    modeToggleButton.textContent = currentSettings.pinMode === 'corner' ? '自由に配置' : '端に固定';
+}
+
 function createSaveButton() {
     const btn = document.createElement('button');
     btn.className = 'you-utility-save-btn';
@@ -176,57 +210,65 @@ function hideSaveButton() {
     if (saveButton) {
         saveButton.classList.remove('visible');
     }
+    if (modeToggleButton) {
+        modeToggleButton.classList.remove('visible');
+    }
 }
 
 function showSaveButton() {
     if (!saveButton) return;
     if (!playerReference) return;
 
+    if (!modeToggleButton) {
+        modeToggleButton = createModeToggleButton();
+    }
+    updateModeToggleButtonText();
+
     // Calculate position relative to the pinned player
     const rect = playerReference.getBoundingClientRect();
-    const btnRect = saveButton.getBoundingClientRect(); // Get button dimensions
+    const btnRect = saveButton.getBoundingClientRect();
+    const modeBtnRect = modeToggleButton.getBoundingClientRect();
     const winWidth = window.innerWidth;
     const winHeight = window.innerHeight;
 
     let btnTop, btnLeft;
     const margin = 12;
+    const gap = 8;
 
     // Determine Vertical Position (Top/Bottom)
-    // If player is in the top half, button goes below.
-    // If player is in the bottom half, button goes above.
     const isTopHalf = (rect.top + rect.height / 2) < (winHeight / 2);
 
     if (isTopHalf) {
-        // Place below
         btnTop = rect.bottom + margin;
     } else {
-        // Place above
         btnTop = rect.top - btnRect.height - margin;
     }
 
     // Determine Horizontal Position (Left/Right)
-    // If player is in the left half, align left.
-    // If player is in the right half, align right.
     const isLeftHalf = (rect.left + rect.width / 2) < (winWidth / 2);
 
+    const totalWidth = btnRect.width + gap + modeBtnRect.width;
+
     if (isLeftHalf) {
-        // Align Left
         btnLeft = rect.left;
     } else {
-        // Align Right
-        btnLeft = rect.right - btnRect.width;
+        btnLeft = rect.right - totalWidth;
     }
 
-    // Apply Styles
+    // Apply Styles to Save Button
     saveButton.style.top = `${btnTop}px`;
     saveButton.style.left = `${btnLeft}px`;
-    
     saveButton.classList.add('visible');
-    saveButton.textContent = '設定を保存'; // Reset text
+    saveButton.textContent = '設定を保存';
+    
+    // Apply Styles to Mode Toggle Button
+    modeToggleButton.style.top = `${btnTop}px`;
+    modeToggleButton.style.left = `${btnLeft + btnRect.width + gap}px`;
+    modeToggleButton.classList.add('visible');
     
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
-        saveButton.classList.remove('visible');
+        hideSaveButton();
     }, 5000);
 }
 
@@ -234,13 +276,15 @@ function saveSettings() {
     // Save current settings to storage
     chrome.storage.local.set({
         size: currentSettings.size,
-        position: currentSettings.position
+        position: currentSettings.position,
+        pinMode: currentSettings.pinMode,
+        freePosition: currentSettings.freePosition
     }, () => {
         if (saveButton) {
             saveButton.textContent = '保存しました';
             if (saveTimeout) clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
-                saveButton.classList.remove('visible');
+                hideSaveButton();
             }, 1000);
         }
     });
@@ -365,44 +409,47 @@ function onMouseUp(e) {
     if (dragData.hasMoved) {
         dragData.isClickSuppressed = true;
         
-        // 1. Calculate new Quadrant (Position)
+        // 1. Calculate new Position / Size
         const rect = playerReference.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
         
-        const winWidth = window.innerWidth;
-        const winHeight = window.innerHeight;
-
-        let newPosition = '';
-        if (centerY < winHeight / 2) {
-            newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
+        if (currentSettings.pinMode === 'free') {
+            currentSettings.freePosition = { top: rect.top, left: rect.left };
         } else {
-            newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const winWidth = window.innerWidth;
+            const winHeight = window.innerHeight;
+
+            let newPosition = '';
+            if (centerY < winHeight / 2) {
+                newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
+            } else {
+                newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
+            }
+            currentSettings.position = newPosition;
         }
 
-        // 2. Update Settings Object (BUT DO NOT SAVE TO STORAGE YET)
-        currentSettings.position = newPosition;
         if (dragData.isResizing) {
             currentSettings.size = rect.width;
         }
 
-        // 3. Remove inline styles so applySettings can take over with standard margins
+        // 2. Remove inline styles so applySettings can take over
         playerReference.style.removeProperty('top');
         playerReference.style.removeProperty('left');
         playerReference.style.removeProperty('bottom');
         playerReference.style.removeProperty('right');
-        playerReference.style.removeProperty('width'); // Remove explicit width to use var
+        playerReference.style.removeProperty('width');
         
-        // 4. Apply Settings (Snaps to nearest corner with updated size)
+        // 3. Apply Settings (Snaps to nearest corner or stays at free position with updated size)
         applySettings(currentSettings);
         
-        // 5. Show Save Button (Since it's fixed position, it will calculate based on new position)
-        // Give a slight delay for layout to settle
+        // 4. Show Save Button
         requestAnimationFrame(() => {
             showSaveButton();
         });
         
-        // 6. Trigger Resize Event to fix internal player layout
+        // 5. Trigger Resize Event
         window.dispatchEvent(new Event('resize'));
     }
     
@@ -442,10 +489,12 @@ function pinPlayer() {
   if (!closeButton) closeButton = createCloseButton();
   playerReference.appendChild(closeButton);
 
-  // 4. Add Save Button
-  // Only create if not exists
+  // 4. Add Buttons (Save/Mode) - Only create if not exists
   if (!saveButton) {
       saveButton = createSaveButton();
+  }
+  if (!modeToggleButton) {
+      modeToggleButton = createModeToggleButton();
   }
 
   // 5. Add Resize Handles
@@ -475,11 +524,13 @@ function unpinPlayer() {
   // 2. Remove Elements
   if (closeButton && closeButton.parentNode) closeButton.remove();
   
-  // Don't remove save button completely, just hide it, or remove it and recreate next time.
-  // Let's remove it to keep DOM clean.
   if (saveButton && saveButton.parentNode) {
       saveButton.remove();
-      saveButton = null; // Reset reference so it's recreated
+      saveButton = null; 
+  }
+  if (modeToggleButton && modeToggleButton.parentNode) {
+      modeToggleButton.remove();
+      modeToggleButton = null;
   }
   
   resizeHandles.forEach(handle => {

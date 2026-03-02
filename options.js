@@ -2,8 +2,9 @@ const DEFAULT_SETTINGS = {
   isPinned: true,
   position: 'top-right',
   size: 500,
-  theme: 'system'
-  // lang is handled dynamically if not present
+  theme: 'system',
+  pinMode: 'corner',
+  freePosition: { top: 100, left: 100 }
 };
 
 const TRANSLATIONS = {
@@ -16,7 +17,10 @@ const TRANSLATIONS = {
     themeDark: 'Dark',
     playerAppearance: 'Player Appearance',
     position: 'Position',
-    size: 'Size (Width in px)'
+    size: 'Size (Width in px)',
+    pinMode: 'Pin Mode',
+    modeCorner: 'Corner',
+    modeFree: 'Free Position'
   },
   ja: {
     general: '一般',
@@ -27,7 +31,10 @@ const TRANSLATIONS = {
     themeDark: 'ダーク',
     playerAppearance: 'プレイヤーの表示',
     position: '位置',
-    size: 'サイズ (幅 px)'
+    size: 'サイズ (幅 px)',
+    pinMode: '固定モード',
+    modeCorner: '端に固定',
+    modeFree: '自由な位置'
   }
 };
 
@@ -39,9 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const sizeInput = document.getElementById('size-input');
   const sizeSlider = document.getElementById('size-slider');
   const posBtns = document.querySelectorAll('.pos-btn');
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  const positionSetting = document.getElementById('position-setting');
 
   // Load Settings
-  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang'], (result) => {
+  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition'], (result) => {
     // Determine Language
     let lang = result.lang;
     if (!lang) {
@@ -62,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sizeInput.value = settings.size;
     sizeSlider.value = settings.size;
     updatePositionUI(settings.position);
+    updateModeUI(settings.pinMode);
     
     // Apply Theme & Lang immediately
     applyTheme(settings.theme);
@@ -104,11 +114,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+      updateModeUI(mode);
+      saveAndSync({ pinMode: mode });
+    });
+  });
+
   function updatePositionUI(position) {
     posBtns.forEach(btn => {
       if (btn.dataset.pos === position) btn.classList.add('active');
       else btn.classList.remove('active');
     });
+  }
+
+  function updateModeUI(mode) {
+    modeBtns.forEach(btn => {
+      if (btn.dataset.mode === mode) btn.classList.add('active');
+      else btn.classList.remove('active');
+    });
+
+    // Disable position selection if in free mode
+    if (mode === 'free') {
+        positionSetting.classList.add('disabled');
+    } else {
+        positionSetting.classList.remove('disabled');
+    }
   }
 
   function applyTheme(theme) {
