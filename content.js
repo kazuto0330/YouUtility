@@ -4,7 +4,25 @@ const DEFAULT_SETTINGS = {
   position: 'top-right',
   size: 500,
   pinMode: 'corner', // 'corner' or 'free'
-  freePosition: { top: 100, left: 100 }
+  freePosition: { top: 100, left: 100 },
+  lang: 'en'
+};
+
+const UI_TRANSLATIONS = {
+  en: {
+    save: 'Save Settings',
+    saved: 'Saved!',
+    modeToFree: 'To Free Position Mode',
+    modeToCorner: 'To Corner Mode',
+    close: 'Close Mini Player'
+  },
+  ja: {
+    save: '設定を保存',
+    saved: '保存しました',
+    modeToFree: '自由な位置モードへ',
+    modeToCorner: '端に固定モードへ',
+    close: 'ミニ動画プレイヤーを閉じる'
+  }
 };
 
 let currentSettings = { ...DEFAULT_SETTINGS };
@@ -36,12 +54,18 @@ let dragData = {
 };
 
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size', 'pinMode', 'freePosition'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'pinMode', 'freePosition', 'lang'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
   // Give YT a moment to load the player
   setTimeout(initObserver, 1000); 
 });
+
+function getUIText(key) {
+    const lang = currentSettings.lang || 'en';
+    const texts = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['en'];
+    return texts[key] || '';
+}
 
 // Listen for updates from options page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -158,7 +182,7 @@ function createCloseButton() {
     const btn = document.createElement('div');
     btn.className = 'you-utility-close-btn';
     btn.innerHTML = '&times;';
-    btn.title = 'ミニ動画プレイヤーを閉じる';
+    btn.title = getUIText('close');
     btn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent drag or other clicks
         userClosed = true;
@@ -191,13 +215,13 @@ function createModeToggleButton() {
 function updateModeToggleButtonText() {
     if (!modeToggleButton) return;
     const isCorner = currentSettings.pinMode === 'corner';
-    modeToggleButton.textContent = isCorner ? '自由な位置モードへ' : '端に固定モードへ';
+    modeToggleButton.textContent = isCorner ? getUIText('modeToFree') : getUIText('modeToCorner');
 }
 
 function createSaveButton() {
     const btn = document.createElement('button');
     btn.className = 'you-utility-save-btn';
-    btn.textContent = '設定を保存';
+    btn.textContent = getUIText('save');
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         saveSettings();
@@ -260,7 +284,7 @@ function showSaveButton() {
     saveButton.style.top = `${btnTop}px`;
     saveButton.style.left = `${btnLeft}px`;
     saveButton.classList.add('visible');
-    saveButton.textContent = '設定を保存';
+    saveButton.textContent = getUIText('save');
     
     // Apply Styles to Mode Toggle Button
     modeToggleButton.style.top = `${btnTop}px`;
@@ -295,7 +319,7 @@ function saveSettings() {
         freePosition: currentSettings.freePosition
     }, () => {
         if (saveButton) {
-            saveButton.textContent = '保存しました';
+            saveButton.textContent = getUIText('saved');
             if (saveTimeout) clearTimeout(saveTimeout);
             saveTimeout = setTimeout(() => {
                 hideSaveButton();
@@ -303,6 +327,7 @@ function saveSettings() {
         }
     });
 }
+
 
 
 function createResizeHandles() {
