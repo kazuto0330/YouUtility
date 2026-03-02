@@ -19,6 +19,11 @@
       "matches": ["*://www.youtube.com/*"],
       "js": ["content.js"],
       "css": ["styles.css"]
+    },
+    {
+      "matches": ["*://www.youtube.com/*"],
+      "js": ["resolution.js"],
+      "world": "MAIN"
     }
   ]
 }

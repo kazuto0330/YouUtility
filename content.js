@@ -3,7 +3,7 @@ const DEFAULT_SETTINGS = {
   isPinned: true,
   position: 'top-right',
   size: 500,
-  pinMode: 'corner', // 'corner' or 'free'
+  pinMode: 'corner',
   freePosition: { top: 100, left: 100 },
   lang: 'en',
   autoResolution: false,
@@ -31,12 +31,12 @@ const UI_TRANSLATIONS = {
 
 let currentSettings = { ...DEFAULT_SETTINGS };
 let observer = null;
-let placeholder = null; // Used to hold space when pinned
+let placeholder = null;
 
 let isPinnedActive = false;
-let playerReference = null; // Cache the player element
-let parentReference = null; // Cache the parent
-let userClosed = false; // Track if user manually closed the pinned player
+let playerReference = null;
+let parentReference = null;
+let userClosed = false;
 let closeButton = null;
 let saveButton = null;
 let modeToggleButton = null;
@@ -46,7 +46,7 @@ let resizeHandles = [];
 let dragData = {
     isDragging: false,
     isResizing: false,
-    resizeCorner: null, // 'top-left', 'top-right', 'bottom-left', 'bottom-right'
+    resizeCorner: null,
     startX: 0,
     startY: 0,
     initialLeft: 0,
@@ -57,33 +57,28 @@ let dragData = {
     isClickSuppressed: false
 };
 
+function syncSettingsToMainWorld(settings) {
+    window.dispatchEvent(new CustomEvent('YouUtilitySettingsUpdate', { detail: settings }));
+}
+
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size', 'pinMode', 'freePosition', 'lang', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
-  // Give YT a moment to load the player
+  syncSettingsToMainWorld(currentSettings);
+  
   setTimeout(() => {
     initObserver();
-    updateResolution();
   }, 1000); 
 });
-
-function getUIText(key) {
-    const lang = currentSettings.lang || 'en';
-    const texts = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['en'];
-    return texts[key] || '';
-}
 
 // Listen for updates from options page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "updateSettings") {
     currentSettings = { ...currentSettings, ...request.settings };
     applySettings(currentSettings);
+    syncSettingsToMainWorld(currentSettings);
     
-    if (currentSettings.autoResolution) {
-        updateResolution();
-    }
-
     if (!currentSettings.isPinned) {
         cleanupObserver();
         unpinPlayer();
@@ -130,106 +125,11 @@ function applySettings(settings) {
   }
 }
 
-function updateResolution() {
-  if (!currentSettings.autoResolution) return;
-
-  const player = document.querySelector("#movie_player");
-  if (!player || !player.getAvailableQualityLevels) {
-    setTimeout(updateResolution, 1000);
-    return;
-  }
-
-  const isPlaylist = window.location.href.includes("list=");
-  const availableLevels = player.getAvailableQualityLevels();
-  
-  if (availableLevels.length === 0) {
-      setTimeout(updateResolution, 1000);
-      return;
-  }
-
-  let targetRes = isPlaylist ? currentSettings.playlistResolution : currentSettings.mainResolution;
-  
-  if (!availableLevels.includes(targetRes)) {
-    if (!isPlaylist) {
-        for (const res of currentSettings.fallbackResolutions) {
-          if (availableLevels.includes(res)) {
-            targetRes = res;
-            break;
-          }
-        }
-    } else {
-        if (availableLevels.includes(currentSettings.mainResolution)) {
-            targetRes = currentSettings.mainResolution;
-        } else {
-            for (const res of currentSettings.fallbackResolutions) {
-              if (availableLevels.includes(res)) {
-                targetRes = res;
-                break;
-              }
-            }
-        }
-    }
-  }
-
-  if (availableLevels.includes(targetRes)) {
-    forceResolution(player, targetRes);
-  }
+function getUIText(key) {
+    const lang = currentSettings.lang || 'en';
+    const texts = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['en'];
+    return texts[key] || '';
 }
-
-function forceResolution(player, target, retryCount = 0) {
-    if (!currentSettings.autoResolution) return;
-    
-    // Set for current player
-    if (player.setPlaybackQualityRange) {
-        player.setPlaybackQualityRange(target, target, true);
-    }
-    if (player.setPlaybackQuality) {
-        player.setPlaybackQuality(target);
-    }
-
-    // Attempt to set YouTube's internal preference via localStorage
-    try {
-        const ytConfig = JSON.parse(localStorage.getItem('yt-player-quality') || '{}');
-        ytConfig.data = target;
-        ytConfig.expiration = Date.now() + 24 * 60 * 60 * 1000;
-        localStorage.setItem('yt-player-quality', JSON.stringify(ytConfig));
-    } catch (e) {}
-
-    // Verify and retry if necessary
-    if (retryCount < 8) {
-        setTimeout(() => {
-            const current = player.getPlaybackQuality();
-            if (current !== target && current !== 'unknown') {
-                forceResolution(player, target, retryCount + 1);
-            }
-        }, 1000);
-    }
-}
-
-// Hook into player state changes to catch YT overriding the quality
-function monitorPlayerState() {
-    const player = document.querySelector("#movie_player");
-    if (!player) {
-        setTimeout(monitorPlayerState, 1000);
-        return;
-    }
-
-    // Use YT's player API events if possible
-    player.addEventListener('onStateChange', (state) => {
-        // 1 = Playing, 3 = Buffering
-        if (state === 1 || state === 3) {
-            updateResolution();
-        }
-    });
-}
-
-// Watch for YouTube navigation events
-window.addEventListener('yt-navigate-finish', () => {
-    setTimeout(updateResolution, 1000);
-});
-
-// Initial monitor
-setTimeout(monitorPlayerState, 2000);
 
 function initObserver() {
   if (!currentSettings.isPinned) return;
