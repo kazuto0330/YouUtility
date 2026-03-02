@@ -74,6 +74,68 @@
           <input type="range" id="size-slider" min="200" max="1000" step="10">
         </div>
       </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2 data-i18n="resolutionSettings">Resolution Settings</h2>
+          <label class="switch">
+            <input type="checkbox" id="auto-res-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="setting-group" id="res-settings-content">
+          <div class="setting-row">
+            <label data-i18n="mainResolution">Main Resolution</label>
+            <select id="main-res-select">
+              <option value="hd2160">2160p (4K)</option>
+              <option value="hd1440">1440p (2K)</option>
+              <option value="hd1080">1080p (HD)</option>
+              <option value="hd720">720p (HD)</option>
+              <option value="large">480p</option>
+              <option value="medium">360p</option>
+              <option value="small">240p</option>
+              <option value="tiny">144p</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <label data-i18n="fallbackResolutions">Fallback Resolutions (Priority order)</label>
+            <div class="fallback-container">
+              <div id="fallback-res-list" class="fallback-list-dynamic">
+                <!-- Items will be added here dynamically -->
+              </div>
+              <div class="add-fallback-row">
+                <select id="add-res-select">
+                  <option value="hd2160">2160p (4K)</option>
+                  <option value="hd1440">1440p (2K)</option>
+                  <option value="hd1080">1080p (HD)</option>
+                  <option value="hd720">720p (HD)</option>
+                  <option value="large">480p</option>
+                  <option value="medium">360p</option>
+                  <option value="small">240p</option>
+                  <option value="tiny">144p</option>
+                </select>
+                <button id="add-res-btn" class="add-btn">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label data-i18n="playlistResolution">Playlist Resolution</label>
+            <select id="playlist-res-select">
+              <option value="hd2160">2160p (4K)</option>
+              <option value="hd1440">1440p (2K)</option>
+              <option value="hd1080">1080p (HD)</option>
+              <option value="hd720">720p (HD)</option>
+              <option value="large">480p</option>
+              <option value="medium">360p</option>
+              <option value="small">240p</option>
+              <option value="tiny">144p</option>
+            </select>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
   <script src="options.js"></script>
