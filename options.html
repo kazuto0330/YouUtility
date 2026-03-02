@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouUtility Settings</title>
+  <title>YouUtility Setting</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>YouUtility Settings</h1>
+      <h1>YouUtility Setting</h1>
     </header>
 
     <main>
@@ -36,7 +36,7 @@
 
       <section class="card">
         <div class="section-header">
-          <h2 data-i18n="playerAppearance">Player Appearance</h2>
+          <h2 data-i18n="playerAppearance">Mini Video Player Settings</h2>
           <label class="switch">
             <input type="checkbox" id="pin-toggle">
             <span class="slider round"></span>
@@ -53,11 +53,15 @@
 
         <div class="setting-group" id="position-setting">
           <label data-i18n="position">Position</label>
-          <div class="position-grid">
+          <div class="position-grid" id="position-grid">
             <button class="pos-btn" data-pos="top-left" aria-label="Top Left"></button>
             <button class="pos-btn" data-pos="top-right" aria-label="Top Right"></button>
             <button class="pos-btn" data-pos="bottom-left" aria-label="Bottom Left"></button>
             <button class="pos-btn" data-pos="bottom-right" aria-label="Bottom Right"></button>
+          </div>
+          <div id="free-coords-display" class="coords-display" style="display: none;">
+            <p><span data-i18n="currentPosition">Current Position:</span></p>
+            <p>X: <span id="coord-x">0</span>px, Y: <span id="coord-y">0</span>px</p>
           </div>
         </div>
 

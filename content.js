@@ -158,7 +158,7 @@ function createCloseButton() {
     const btn = document.createElement('div');
     btn.className = 'you-utility-close-btn';
     btn.innerHTML = '&times;';
-    btn.title = 'ピン留め解除';
+    btn.title = 'ミニ動画プレイヤーを閉じる';
     btn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent drag or other clicks
         userClosed = true;
@@ -190,7 +190,8 @@ function createModeToggleButton() {
 
 function updateModeToggleButtonText() {
     if (!modeToggleButton) return;
-    modeToggleButton.textContent = currentSettings.pinMode === 'corner' ? '自由に配置' : '端に固定';
+    const isCorner = currentSettings.pinMode === 'corner';
+    modeToggleButton.textContent = isCorner ? '自由な位置モードへ' : '端に固定モードへ';
 }
 
 function createSaveButton() {
@@ -273,6 +274,19 @@ function showSaveButton() {
 }
 
 function saveSettings() {
+    // Snap size and position to nearest 10px before saving
+    const snappedSize = Math.round(currentSettings.size / 10) * 10;
+    const snappedFreePos = {
+        top: Math.round(currentSettings.freePosition.top / 10) * 10,
+        left: Math.round(currentSettings.freePosition.left / 10) * 10
+    };
+
+    currentSettings.size = snappedSize;
+    currentSettings.freePosition = snappedFreePos;
+
+    // Apply snapped settings immediately for visual feedback
+    applySettings(currentSettings);
+
     // Save current settings to storage
     chrome.storage.local.set({
         size: currentSettings.size,
@@ -289,6 +303,7 @@ function saveSettings() {
         }
     });
 }
+
 
 function createResizeHandles() {
     const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];

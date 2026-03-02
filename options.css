@@ -214,3 +214,23 @@ input[type="range"] {
   opacity: 0.4;
   pointer-events: none;
 }
+
+.coords-display {
+  background: var(--bg-color);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 10px;
+}
+
+.coords-display p {
+  margin: 4px 0;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.coords-display span[data-i18n] {
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--text-color);
+}

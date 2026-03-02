@@ -15,12 +15,13 @@ const TRANSLATIONS = {
     themeSystem: 'System Default',
     themeLight: 'Light',
     themeDark: 'Dark',
-    playerAppearance: 'Player Appearance',
+    playerAppearance: 'Mini Video Player Settings',
     position: 'Position',
     size: 'Size (Width in px)',
     pinMode: 'Pin Mode',
     modeCorner: 'Corner',
-    modeFree: 'Free Position'
+    modeFree: 'Free Position',
+    currentPosition: 'Current Position'
   },
   ja: {
     general: '一般',
@@ -29,12 +30,13 @@ const TRANSLATIONS = {
     themeSystem: 'システム設定',
     themeLight: 'ライト',
     themeDark: 'ダーク',
-    playerAppearance: 'プレイヤーの表示',
+    playerAppearance: 'ミニ動画プレイヤー設定',
     position: '位置',
     size: 'サイズ (幅 px)',
     pinMode: '固定モード',
     modeCorner: '端に固定',
-    modeFree: '自由な位置'
+    modeFree: '自由な位置',
+    currentPosition: '現在の座標'
   }
 };
 
@@ -48,6 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const posBtns = document.querySelectorAll('.pos-btn');
   const modeBtns = document.querySelectorAll('.mode-btn');
   const positionSetting = document.getElementById('position-setting');
+  const positionGrid = document.getElementById('position-grid');
+  const freeCoordsDisplay = document.getElementById('free-coords-display');
+  const coordX = document.getElementById('coord-x');
+  const coordY = document.getElementById('coord-y');
 
   // Load Settings
   chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition'], (result) => {
@@ -71,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     sizeInput.value = settings.size;
     sizeSlider.value = settings.size;
     updatePositionUI(settings.position);
-    updateModeUI(settings.pinMode);
+    updateModeUI(settings.pinMode, settings.freePosition);
     
     // Apply Theme & Lang immediately
     applyTheme(settings.theme);
@@ -117,8 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
   modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
-      updateModeUI(mode);
-      saveAndSync({ pinMode: mode });
+      // When switching, get latest freePosition if available
+      chrome.storage.local.get(['freePosition'], (res) => {
+          const fp = res.freePosition || DEFAULT_SETTINGS.freePosition;
+          updateModeUI(mode, fp);
+          saveAndSync({ pinMode: mode });
+      });
     });
   });
 
@@ -129,17 +139,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function updateModeUI(mode) {
+  function updateModeUI(mode, freePosition) {
     modeBtns.forEach(btn => {
       if (btn.dataset.mode === mode) btn.classList.add('active');
       else btn.classList.remove('active');
     });
 
-    // Disable position selection if in free mode
     if (mode === 'free') {
-        positionSetting.classList.add('disabled');
+        positionGrid.style.display = 'none';
+        freeCoordsDisplay.style.display = 'block';
+        if (freePosition) {
+            coordX.textContent = Math.round(freePosition.left);
+            coordY.textContent = Math.round(freePosition.top);
+        }
     } else {
-        positionSetting.classList.remove('disabled');
+        positionGrid.style.display = 'grid';
+        freeCoordsDisplay.style.display = 'none';
     }
   }
 
