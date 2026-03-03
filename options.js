@@ -26,7 +26,7 @@ const TRANSLATIONS = {
     modeCorner: 'Corner',
     modeFree: 'Free Position',
     currentPosition: 'Current Position',
-    resolutionSettings: 'Resolution Settings',
+    resolutionSettings: 'Resolution',
     mainResolution: 'Main Resolution',
     fallbackResolutions: 'Fallback Resolutions (Priority order)',
     playlistResolution: 'Playlist Resolution'
@@ -45,7 +45,7 @@ const TRANSLATIONS = {
     modeCorner: '端に固定',
     modeFree: '自由な位置',
     currentPosition: '現在の座標',
-    resolutionSettings: '解像度設定',
+    resolutionSettings: '解像度',
     mainResolution: 'メインの解像度',
     fallbackResolutions: 'フォールバック解像度 (優先順)',
     playlistResolution: 'リスト再生時の解像度'

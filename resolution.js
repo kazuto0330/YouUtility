@@ -1,6 +1,12 @@
 // resolution.js - Runs in MAIN world to access YouTube Player API
 let resSettings = null;
 let isApplying = false;
+let lastAppliedVideoId = null;
+
+function getVideoId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('v');
+}
 
 // Listen for settings from the Isolated World (content.js)
 window.addEventListener('YouUtilitySettingsUpdate', (e) => {
@@ -12,6 +18,9 @@ window.addEventListener('YouUtilitySettingsUpdate', (e) => {
 
 function updateResolutionMain() {
     if (!resSettings || !resSettings.autoResolution || isApplying) return;
+
+    const currentVideoId = getVideoId();
+    if (!currentVideoId || currentVideoId === lastAppliedVideoId) return;
 
     const player = document.querySelector("#movie_player");
     if (!player || !player.getAvailableQualityLevels) return;
@@ -46,14 +55,17 @@ function updateResolutionMain() {
         }
     }
 
-    if (currentRes === targetRes) return;
+    if (currentRes === targetRes) {
+        lastAppliedVideoId = currentVideoId;
+        return;
+    }
 
     if (availableLevels.includes(targetRes)) {
-        applyResolution(player, targetRes);
+        applyResolution(player, targetRes, currentVideoId);
     }
 }
 
-function applyResolution(player, target) {
+function applyResolution(player, target, videoId) {
     isApplying = true;
     try {
         if (player.setPlaybackQualityRange) {
@@ -67,6 +79,8 @@ function applyResolution(player, target) {
         ytConfig.data = target;
         ytConfig.expiration = Date.now() + 24 * 60 * 60 * 1000;
         localStorage.setItem('yt-player-quality', JSON.stringify(ytConfig));
+        
+        lastAppliedVideoId = videoId;
     } catch (e) {
     } finally {
         setTimeout(() => {
