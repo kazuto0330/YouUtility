@@ -9,7 +9,10 @@ const DEFAULT_SETTINGS = {
   autoResolution: false,
   mainResolution: 'hd1080',
   fallbackResolutions: ['hd720', 'large'],
-  playlistResolution: 'hd720'
+  playlistResolution: 'hd720',
+  enablePlaylistResolution: false,
+  miniPlayerResolution: 'medium',
+  enableMiniPlayerResolution: false
 };
 
 const UI_TRANSLATIONS = {
@@ -58,11 +61,12 @@ let dragData = {
 };
 
 function syncSettingsToMainWorld(settings) {
-    window.dispatchEvent(new CustomEvent('YouUtilitySettingsUpdate', { detail: settings }));
+    const detail = { ...settings, isMiniPlayerActive: isPinnedActive };
+    window.dispatchEvent(new CustomEvent('YouUtilitySettingsUpdate', { detail: detail }));
 }
 
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
   syncSettingsToMainWorld(currentSettings);
@@ -422,6 +426,7 @@ function pinPlayer() {
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
   isPinnedActive = true;
+  syncSettingsToMainWorld(currentSettings);
   window.dispatchEvent(new Event('resize'));
 }
 
@@ -447,5 +452,6 @@ function unpinPlayer() {
   } else parentReference.appendChild(playerReference);
   playerReference.classList.remove("you-utility-pinned");
   isPinnedActive = false;
+  syncSettingsToMainWorld(currentSettings);
   window.dispatchEvent(new Event('resize'));
 }

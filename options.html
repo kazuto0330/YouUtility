@@ -123,16 +123,42 @@
 
           <div class="setting-row">
             <label data-i18n="playlistResolution">Playlist Resolution</label>
-            <select id="playlist-res-select">
-              <option value="hd2160">2160p (4K)</option>
-              <option value="hd1440">1440p (2K)</option>
-              <option value="hd1080">1080p (HD)</option>
-              <option value="hd720">720p (HD)</option>
-              <option value="large">480p</option>
-              <option value="medium">360p</option>
-              <option value="small">240p</option>
-              <option value="tiny">144p</option>
-            </select>
+            <div class="input-wrapper">
+              <label class="switch small">
+                <input type="checkbox" id="playlist-res-toggle">
+                <span class="slider round"></span>
+              </label>
+              <select id="playlist-res-select">
+                <option value="hd2160">2160p (4K)</option>
+                <option value="hd1440">1440p (2K)</option>
+                <option value="hd1080">1080p (HD)</option>
+                <option value="hd720">720p (HD)</option>
+                <option value="large">480p</option>
+                <option value="medium">360p</option>
+                <option value="small">240p</option>
+                <option value="tiny">144p</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <label data-i18n="miniPlayerResolution">Mini Player Resolution</label>
+            <div class="input-wrapper">
+              <label class="switch small">
+                <input type="checkbox" id="mini-res-toggle">
+                <span class="slider round"></span>
+              </label>
+              <select id="mini-res-select">
+                <option value="hd2160">2160p (4K)</option>
+                <option value="hd1440">1440p (2K)</option>
+                <option value="hd1080">1080p (HD)</option>
+                <option value="hd720">720p (HD)</option>
+                <option value="large">480p</option>
+                <option value="medium">360p</option>
+                <option value="small">240p</option>
+                <option value="tiny">144p</option>
+              </select>
+            </div>
           </div>
         </div>
       </section>

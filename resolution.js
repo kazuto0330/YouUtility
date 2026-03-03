@@ -29,7 +29,7 @@ function updateResolutionMain() {
     if (!player || !player.getAvailableQualityLevels) return;
 
     const currentVideoId = getVideoId(player);
-    if (!currentVideoId || currentVideoId === lastAppliedVideoId) return;
+    if (!currentVideoId) return;
 
     const currentRes = player.getPlaybackQuality();
     const availableLevels = player.getAvailableQualityLevels();
@@ -40,9 +40,12 @@ function updateResolutionMain() {
     
     // 優先順位に基づいて解像度を探す
     const priorityList = [];
-    if (isPlaylist && resSettings.playlistResolution) {
+    if (isPlaylist && resSettings.enablePlaylistResolution && resSettings.playlistResolution) {
         priorityList.push(resSettings.playlistResolution);
+    } else if (resSettings.isMiniPlayerActive && resSettings.enableMiniPlayerResolution && resSettings.miniPlayerResolution) {
+        priorityList.push(resSettings.miniPlayerResolution);
     }
+    
     if (resSettings.mainResolution) {
         priorityList.push(resSettings.mainResolution);
     }
