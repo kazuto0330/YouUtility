@@ -4,7 +4,14 @@ const DEFAULT_SETTINGS = {
   size: 500,
   theme: 'system',
   pinMode: 'corner',
-  freePosition: { top: 100, left: 100 }
+  freePosition: { top: 100, left: 100 },
+  autoResolution: false,
+  mainResolution: 'hd1080',
+  fallbackResolutions: ['hd720', 'large'],
+  playlistResolution: 'hd720',
+  enablePlaylistResolution: false,
+  miniPlayerResolution: 'medium',
+  enableMiniPlayerResolution: false
 };
 
 const TRANSLATIONS = {
@@ -21,7 +28,12 @@ const TRANSLATIONS = {
     pinMode: 'Pin Mode',
     modeCorner: 'Corner',
     modeFree: 'Free Position',
-    currentPosition: 'Current Position'
+    currentPosition: 'Current Position',
+    resolutionSettings: 'Resolution',
+    mainResolution: 'Main Resolution',
+    fallbackResolutions: 'Fallback Resolutions (Priority order)',
+    playlistResolution: 'Playlist Resolution',
+    miniPlayerResolution: 'Mini Player Resolution'
   },
   ja: {
     general: '一般',
@@ -36,9 +48,27 @@ const TRANSLATIONS = {
     pinMode: '固定モード',
     modeCorner: '端に固定',
     modeFree: '自由な位置',
-    currentPosition: '現在の座標'
+    currentPosition: '現在の座標',
+    resolutionSettings: '解像度',
+    mainResolution: 'メインの解像度',
+    fallbackResolutions: 'フォールバック解像度 (優先順)',
+    playlistResolution: 'リスト再生時の解像度',
+    miniPlayerResolution: 'ミニ動画プレイヤー再生時の解像度'
   }
 };
+
+const RES_LABELS = {
+  'hd2160': '2160p (4K)',
+  'hd1440': '1440p (2K)',
+  'hd1080': '1080p (HD)',
+  'hd720': '720p (HD)',
+  'large': '480p',
+  'medium': '360p',
+  'small': '240p',
+  'tiny': '144p'
+};
+
+let currentFallbackList = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   // Elements
@@ -49,15 +79,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const sizeSlider = document.getElementById('size-slider');
   const posBtns = document.querySelectorAll('.pos-btn');
   const modeBtns = document.querySelectorAll('.mode-btn');
-  const positionSetting = document.getElementById('position-setting');
   const positionGrid = document.getElementById('position-grid');
   const freeCoordsDisplay = document.getElementById('free-coords-display');
   const coordX = document.getElementById('coord-x');
   const coordY = document.getElementById('coord-y');
 
+  const autoResToggle = document.getElementById('auto-res-toggle');
+  const mainResSelect = document.getElementById('main-res-select');
+  
+  const playlistResToggle = document.getElementById('playlist-res-toggle');
+  const playlistResSelect = document.getElementById('playlist-res-select');
+  const miniResToggle = document.getElementById('mini-res-toggle');
+  const miniResSelect = document.getElementById('mini-res-select');
+
+  const resSettingsContent = document.getElementById('res-settings-content');
+  const fallbackResList = document.getElementById('fallback-res-list');
+  const addResSelect = document.getElementById('add-res-select');
+  const addResBtn = document.getElementById('add-res-btn');
+
   // Load Settings
-  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition'], (result) => {
-    // Determine Language
+  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
     let lang = result.lang;
     if (!lang) {
       const browserLang = navigator.language || navigator.userLanguage; 
@@ -65,12 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const settings = { ...DEFAULT_SETTINGS, lang, ...result };
-    // Ensure we save the detected lang if it wasn't there
-    if (!result.lang) {
-        chrome.storage.local.set({ lang });
-    }
+    if (!result.lang) chrome.storage.local.set({ lang });
     
-    // Apply to UI
     pinToggle.checked = settings.isPinned;
     langSelect.value = settings.lang;
     themeSelect.value = settings.theme;
@@ -78,52 +115,57 @@ document.addEventListener('DOMContentLoaded', () => {
     sizeSlider.value = settings.size;
     updatePositionUI(settings.position);
     updateModeUI(settings.pinMode, settings.freePosition);
+
+    // Resolution UI
+    autoResToggle.checked = settings.autoResolution;
+    mainResSelect.value = settings.mainResolution;
     
-    // Apply Theme & Lang immediately
+    playlistResToggle.checked = settings.enablePlaylistResolution;
+    playlistResSelect.value = settings.playlistResolution;
+    
+    miniResToggle.checked = settings.enableMiniPlayerResolution;
+    miniResSelect.value = settings.miniPlayerResolution;
+
+    currentFallbackList = settings.fallbackResolutions || [];
+    renderFallbackList();
+    updateResolutionUI(settings.autoResolution);
+    
     applyTheme(settings.theme);
     applyLanguage(settings.lang);
   });
 
   // Event Listeners
   pinToggle.addEventListener('change', () => saveAndSync({ isPinned: pinToggle.checked }));
-  
   langSelect.addEventListener('change', () => {
-    const lang = langSelect.value;
-    applyLanguage(lang);
-    saveAndSync({ lang });
+    applyLanguage(langSelect.value);
+    saveAndSync({ lang: langSelect.value });
   });
-
   themeSelect.addEventListener('change', () => {
-    const theme = themeSelect.value;
-    applyTheme(theme);
-    saveAndSync({ theme });
+    applyTheme(themeSelect.value);
+    saveAndSync({ theme: themeSelect.value });
   });
 
-  // Sync Input and Slider
   sizeInput.addEventListener('change', () => {
     const val = parseInt(sizeInput.value);
     sizeSlider.value = val;
     saveAndSync({ size: val });
   });
-
   sizeSlider.addEventListener('input', () => {
     const val = parseInt(sizeSlider.value);
     sizeInput.value = val;
-    saveAndSync({ size: val }); // Real-time preview
+    saveAndSync({ size: val });
   });
 
   posBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      const position = btn.dataset.pos;
-      updatePositionUI(position);
-      saveAndSync({ position });
+      updatePositionUI(btn.dataset.pos);
+      saveAndSync({ position: btn.dataset.pos });
     });
   });
 
   modeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.mode;
-      // When switching, get latest freePosition if available
       chrome.storage.local.get(['freePosition'], (res) => {
           const fp = res.freePosition || DEFAULT_SETTINGS.freePosition;
           updateModeUI(mode, fp);
@@ -131,6 +173,102 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   });
+
+  // Resolution Listeners
+  autoResToggle.addEventListener('change', () => {
+    updateResolutionUI(autoResToggle.checked);
+    saveAndSync({ autoResolution: autoResToggle.checked });
+  });
+  mainResSelect.addEventListener('change', () => saveAndSync({ mainResolution: mainResSelect.value }));
+  
+  playlistResToggle.addEventListener('change', () => saveAndSync({ enablePlaylistResolution: playlistResToggle.checked }));
+  playlistResSelect.addEventListener('change', () => saveAndSync({ playlistResolution: playlistResSelect.value }));
+  
+  miniResToggle.addEventListener('change', () => saveAndSync({ enableMiniPlayerResolution: miniResToggle.checked }));
+  miniResSelect.addEventListener('change', () => saveAndSync({ miniPlayerResolution: miniResSelect.value }));
+
+  addResBtn.addEventListener('click', () => {
+    const res = addResSelect.value;
+    if (!currentFallbackList.includes(res)) {
+      currentFallbackList.push(res);
+      renderFallbackList();
+      saveAndSync({ fallbackResolutions: currentFallbackList });
+    }
+  });
+
+  function renderFallbackList() {
+    fallbackResList.innerHTML = '';
+    currentFallbackList.forEach((res, index) => {
+      const item = document.createElement('div');
+      item.className = 'fallback-item';
+      item.draggable = true;
+      item.dataset.index = index;
+      item.dataset.value = res;
+
+      item.innerHTML = `
+        <span class="drag-handle">☰</span>
+        <span class="res-name">${RES_LABELS[res] || res}</span>
+        <button class="remove-res-btn" title="Remove">&times;</button>
+      `;
+
+      item.querySelector('.remove-res-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentFallbackList.splice(index, 1);
+        renderFallbackList();
+        saveAndSync({ fallbackResolutions: currentFallbackList });
+      });
+
+      // Drag and Drop Events
+      item.addEventListener('dragstart', handleDragStart);
+      item.addEventListener('dragover', handleDragOver);
+      item.addEventListener('drop', handleDrop);
+      item.addEventListener('dragend', handleDragEnd);
+      item.addEventListener('dragenter', e => e.preventDefault());
+
+      fallbackResList.appendChild(item);
+    });
+  }
+
+  let dragSourceItem = null;
+
+  function handleDragStart(e) {
+    dragSourceItem = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', this.dataset.index);
+  }
+
+  function handleDragOver(e) {
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+  }
+
+  function handleDrop(e) {
+    if (e.stopPropagation) e.stopPropagation();
+    
+    if (dragSourceItem !== this) {
+      const fromIndex = parseInt(dragSourceItem.dataset.index);
+      const toIndex = parseInt(this.dataset.index);
+      
+      const movedItem = currentFallbackList.splice(fromIndex, 1)[0];
+      currentFallbackList.splice(toIndex, 0, movedItem);
+      
+      renderFallbackList();
+      saveAndSync({ fallbackResolutions: currentFallbackList });
+    }
+    return false;
+  }
+
+  function handleDragEnd() {
+    this.classList.remove('dragging');
+    dragSourceItem = null;
+  }
+
+  function updateResolutionUI(enabled) {
+    if (enabled) resSettingsContent.classList.remove('disabled');
+    else resSettingsContent.classList.add('disabled');
+  }
 
   function updatePositionUI(position) {
     posBtns.forEach(btn => {
@@ -144,7 +282,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (btn.dataset.mode === mode) btn.classList.add('active');
       else btn.classList.remove('active');
     });
-
     if (mode === 'free') {
         positionGrid.style.display = 'none';
         freeCoordsDisplay.style.display = 'block';
@@ -163,30 +300,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (theme === 'system') {
       const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       body.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    } else {
-      body.setAttribute('data-theme', theme);
-    }
+    } else body.setAttribute('data-theme', theme);
   }
 
   function applyLanguage(lang) {
     const texts = TRANSLATIONS[lang] || TRANSLATIONS['en'];
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.getAttribute('data-i18n');
-      if (texts[key]) {
-        el.textContent = texts[key];
-      }
+      if (texts[key]) el.textContent = texts[key];
     });
   }
 
   function saveAndSync(data) {
     chrome.storage.local.set(data);
-    // Send to ALL YouTube tabs
     chrome.tabs.query({ url: "*://www.youtube.com/*" }, (tabs) => {
       tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, {
-          action: "updateSettings",
-          settings: data
-        });
+        chrome.tabs.sendMessage(tab.id, { action: "updateSettings", settings: data });
       });
     });
   }

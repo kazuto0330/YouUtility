@@ -3,9 +3,16 @@ const DEFAULT_SETTINGS = {
   isPinned: true,
   position: 'top-right',
   size: 500,
-  pinMode: 'corner', // 'corner' or 'free'
+  pinMode: 'corner',
   freePosition: { top: 100, left: 100 },
-  lang: 'en'
+  lang: 'en',
+  autoResolution: false,
+  mainResolution: 'hd1080',
+  fallbackResolutions: ['hd720', 'large'],
+  playlistResolution: 'hd720',
+  enablePlaylistResolution: false,
+  miniPlayerResolution: 'medium',
+  enableMiniPlayerResolution: false
 };
 
 const UI_TRANSLATIONS = {
@@ -27,12 +34,12 @@ const UI_TRANSLATIONS = {
 
 let currentSettings = { ...DEFAULT_SETTINGS };
 let observer = null;
-let placeholder = null; // Used to hold space when pinned
+let placeholder = null;
 
 let isPinnedActive = false;
-let playerReference = null; // Cache the player element
-let parentReference = null; // Cache the parent
-let userClosed = false; // Track if user manually closed the pinned player
+let playerReference = null;
+let parentReference = null;
+let userClosed = false;
 let closeButton = null;
 let saveButton = null;
 let modeToggleButton = null;
@@ -42,7 +49,7 @@ let resizeHandles = [];
 let dragData = {
     isDragging: false,
     isResizing: false,
-    resizeCorner: null, // 'top-left', 'top-right', 'bottom-left', 'bottom-right'
+    resizeCorner: null,
     startX: 0,
     startY: 0,
     initialLeft: 0,
@@ -53,26 +60,29 @@ let dragData = {
     isClickSuppressed: false
 };
 
+function syncSettingsToMainWorld(settings) {
+    const detail = { ...settings, isMiniPlayerActive: isPinnedActive };
+    window.dispatchEvent(new CustomEvent('YouUtilitySettingsUpdate', { detail: detail }));
+}
+
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size', 'pinMode', 'freePosition', 'lang'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
-  // Give YT a moment to load the player
-  setTimeout(initObserver, 1000); 
+  syncSettingsToMainWorld(currentSettings);
+  
+  setTimeout(() => {
+    initObserver();
+  }, 1000); 
 });
-
-function getUIText(key) {
-    const lang = currentSettings.lang || 'en';
-    const texts = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['en'];
-    return texts[key] || '';
-}
 
 // Listen for updates from options page
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "updateSettings") {
     currentSettings = { ...currentSettings, ...request.settings };
     applySettings(currentSettings);
-    // Re-check observer state
+    syncSettingsToMainWorld(currentSettings);
+    
     if (!currentSettings.isPinned) {
         cleanupObserver();
         unpinPlayer();
@@ -84,13 +94,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 function applySettings(settings) {
   const root = document.documentElement;
-  
-  // 1. Apply Size (px)
   root.style.setProperty('--yu-width', `${settings.size}px`);
 
-  // 2. Apply Position & Header Margin
   const baseMargin = 20;
-  const headerMargin = 80; // 56px header + spacing
+  const headerMargin = 80;
 
   root.style.setProperty('--yu-top', 'auto');
   root.style.setProperty('--yu-bottom', 'auto');
@@ -122,13 +129,18 @@ function applySettings(settings) {
   }
 }
 
+function getUIText(key) {
+    const lang = currentSettings.lang || 'en';
+    const texts = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS['en'];
+    return texts[key] || '';
+}
+
 function initObserver() {
   if (!currentSettings.isPinned) return;
-  if (observer) return; // Already observing
+  if (observer) return;
 
   const player = document.querySelector("#movie_player");
   if (!player) {
-    // Retry if not found yet
     setTimeout(initObserver, 1000);
     return;
   }
@@ -141,15 +153,11 @@ function initObserver() {
     placeholder.id = "you-utility-placeholder";
     placeholder.style.width = "100%";
     placeholder.style.height = "100%"; 
-    // We don't append it yet.
   }
 
-  // Observe the PARENT container
-  // We use a threshold of 0 (triggers when even 1px is out/in)
-  // We want to know when it leaves the viewport completely.
   observer = new IntersectionObserver(handleIntersect, {
     threshold: 0,
-    rootMargin: "-60px 0px 0px 0px" // Trigger when it scrolls past the header
+    rootMargin: "-60px 0px 0px 0px" 
   });
 
   observer.observe(parentReference);
@@ -167,13 +175,11 @@ function handleIntersect(entries) {
   const isScrolledPast = entry.boundingClientRect.top < 0;
 
   if (entry.isIntersecting) {
-      // Reset userClosed when player comes back into view
       userClosed = false;
       unpinPlayer();
   } else if (currentSettings.isPinned && !entry.isIntersecting && isScrolledPast && !userClosed) {
     pinPlayer();
   } else {
-    // If scrolled past but userClosed is true, ensure it's unpinned
     if (userClosed) unpinPlayer();
   }
 }
@@ -184,7 +190,7 @@ function createCloseButton() {
     btn.innerHTML = '&times;';
     btn.title = getUIText('close');
     btn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent drag or other clicks
+        e.stopPropagation();
         userClosed = true;
         unpinPlayer();
     });
@@ -197,16 +203,13 @@ function createModeToggleButton() {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentSettings.pinMode = currentSettings.pinMode === 'corner' ? 'free' : 'corner';
-        
-        // If switching to free, use current rect as initial free position
         if (currentSettings.pinMode === 'free') {
             const rect = playerReference.getBoundingClientRect();
             currentSettings.freePosition = { top: rect.top, left: rect.left };
         }
-        
         applySettings(currentSettings);
         updateModeToggleButtonText();
-        showSaveButton(); // Reposition and refresh timer
+        showSaveButton();
     });
     document.body.appendChild(btn);
     return btn;
@@ -226,30 +229,22 @@ function createSaveButton() {
         e.stopPropagation();
         saveSettings();
     });
-    // Append to body instead of player to avoid clipping
     document.body.appendChild(btn);
     return btn;
 }
 
 function hideSaveButton() {
-    if (saveButton) {
-        saveButton.classList.remove('visible');
-    }
-    if (modeToggleButton) {
-        modeToggleButton.classList.remove('visible');
-    }
+    if (saveButton) saveButton.classList.remove('visible');
+    if (modeToggleButton) modeToggleButton.classList.remove('visible');
 }
 
 function showSaveButton() {
     if (!saveButton) return;
     if (!playerReference) return;
 
-    if (!modeToggleButton) {
-        modeToggleButton = createModeToggleButton();
-    }
+    if (!modeToggleButton) modeToggleButton = createModeToggleButton();
     updateModeToggleButtonText();
 
-    // Calculate position relative to the pinned player
     const rect = playerReference.getBoundingClientRect();
     const btnRect = saveButton.getBoundingClientRect();
     const modeBtnRect = modeToggleButton.getBoundingClientRect();
@@ -259,59 +254,39 @@ function showSaveButton() {
     let btnTop, btnLeft;
     const margin = 12;
     const gap = 8;
-
-    // Determine Vertical Position (Top/Bottom)
     const isTopHalf = (rect.top + rect.height / 2) < (winHeight / 2);
 
-    if (isTopHalf) {
-        btnTop = rect.bottom + margin;
-    } else {
-        btnTop = rect.top - btnRect.height - margin;
-    }
+    if (isTopHalf) btnTop = rect.bottom + margin;
+    else btnTop = rect.top - btnRect.height - margin;
 
-    // Determine Horizontal Position (Left/Right)
     const isLeftHalf = (rect.left + rect.width / 2) < (winWidth / 2);
-
     const totalWidth = btnRect.width + gap + modeBtnRect.width;
 
-    if (isLeftHalf) {
-        btnLeft = rect.left;
-    } else {
-        btnLeft = rect.right - totalWidth;
-    }
+    if (isLeftHalf) btnLeft = rect.left;
+    else btnLeft = rect.right - totalWidth;
 
-    // Apply Styles to Save Button
     saveButton.style.top = `${btnTop}px`;
     saveButton.style.left = `${btnLeft}px`;
     saveButton.classList.add('visible');
     saveButton.textContent = getUIText('save');
     
-    // Apply Styles to Mode Toggle Button
     modeToggleButton.style.top = `${btnTop}px`;
     modeToggleButton.style.left = `${btnLeft + btnRect.width + gap}px`;
     modeToggleButton.classList.add('visible');
     
     if (saveTimeout) clearTimeout(saveTimeout);
-    saveTimeout = setTimeout(() => {
-        hideSaveButton();
-    }, 5000);
+    saveTimeout = setTimeout(hideSaveButton, 5000);
 }
 
 function saveSettings() {
-    // Snap size and position to nearest 10px before saving
     const snappedSize = Math.round(currentSettings.size / 10) * 10;
     const snappedFreePos = {
         top: Math.round(currentSettings.freePosition.top / 10) * 10,
         left: Math.round(currentSettings.freePosition.left / 10) * 10
     };
-
     currentSettings.size = snappedSize;
     currentSettings.freePosition = snappedFreePos;
-
-    // Apply snapped settings immediately for visual feedback
     applySettings(currentSettings);
-
-    // Save current settings to storage
     chrome.storage.local.set({
         size: currentSettings.size,
         position: currentSettings.position,
@@ -321,14 +296,10 @@ function saveSettings() {
         if (saveButton) {
             saveButton.textContent = getUIText('saved');
             if (saveTimeout) clearTimeout(saveTimeout);
-            saveTimeout = setTimeout(() => {
-                hideSaveButton();
-            }, 1000);
+            saveTimeout = setTimeout(hideSaveButton, 1000);
         }
     });
 }
-
-
 
 function createResizeHandles() {
     const corners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
@@ -342,28 +313,14 @@ function createResizeHandles() {
 
 function onMouseDown(e) {
     if (!isPinnedActive) return;
-
-    // Check for resize handle
     if (e.target.classList.contains('you-utility-resize-handle')) {
         dragData.isResizing = true;
         dragData.resizeCorner = e.target.dataset.corner;
-    } 
-    // Check if clicking controls
-    else if (e.target.closest('.ytp-chrome-bottom') || 
-        e.target.closest('.ytp-chrome-top') ||
-        e.target.closest('.ytp-gradient-bottom') ||
-        e.target.closest('.ytp-gradient-top') ||
-        e.target.closest('.ytp-popup') || 
-        e.target.closest('.you-utility-close-btn') ||
-        e.target.closest('.you-utility-save-btn')) {
+    } else if (e.target.closest('.ytp-chrome-bottom') || e.target.closest('.ytp-chrome-top') || e.target.closest('.ytp-gradient-bottom') || e.target.closest('.ytp-gradient-top') || e.target.closest('.ytp-popup') || e.target.closest('.you-utility-close-btn') || e.target.closest('.you-utility-save-btn')) {
         return;
-    } else {
-        dragData.isDragging = true;
-    }
+    } else dragData.isDragging = true;
 
-    // Hide save button immediately when interaction starts
     hideSaveButton();
-
     dragData.hasMoved = false; 
     dragData.isClickSuppressed = false;
     dragData.startX = e.clientX;
@@ -375,24 +332,18 @@ function onMouseDown(e) {
     dragData.initialWidth = rect.width;
     dragData.initialHeight = rect.height;
 
-    // Set styles to absolute pixels to allow free drag/resize
     playerReference.style.setProperty('top', `${rect.top}px`, 'important');
     playerReference.style.setProperty('left', `${rect.left}px`, 'important');
     playerReference.style.setProperty('bottom', 'auto', 'important');
     playerReference.style.setProperty('right', 'auto', 'important');
     playerReference.style.setProperty('width', `${rect.width}px`, 'important');
-
-    // Prevent text selection
     e.preventDefault();
 }
 
 function onMouseMove(e) {
     if (!dragData.isDragging && !dragData.isResizing) return;
-
     const dx = e.clientX - dragData.startX;
     const dy = e.clientY - dragData.startY;
-
-    // Threshold for move start
     if (!dragData.hasMoved && Math.hypot(dx, dy) < 5) return;
     dragData.hasMoved = true;
 
@@ -400,42 +351,19 @@ function onMouseMove(e) {
         let newWidth = dragData.initialWidth;
         let newLeft = dragData.initialLeft;
         let newTop = dragData.initialTop;
-
-        // Aspect Ratio 16:9
         const aspect = 16 / 9;
-
-        // Calculate new width based on corner
-        if (dragData.resizeCorner.includes('right')) {
-            newWidth = dragData.initialWidth + dx;
-        } else if (dragData.resizeCorner.includes('left')) {
-            newWidth = dragData.initialWidth - dx;
-        }
-
-        // Min width constraint (e.g., 200px)
+        if (dragData.resizeCorner.includes('right')) newWidth = dragData.initialWidth + dx;
+        else if (dragData.resizeCorner.includes('left')) newWidth = dragData.initialWidth - dx;
         if (newWidth < 200) newWidth = 200;
-
-        // Max width constraint (optional, e.g., window width)
         if (newWidth > window.innerWidth - 40) newWidth = window.innerWidth - 40;
-
-        // Adjust Left position if dragging left side
-        if (dragData.resizeCorner.includes('left')) {
-            newLeft = dragData.initialLeft + (dragData.initialWidth - newWidth);
-        }
-
-        // Adjust Top position if dragging top side (to maintain aspect ratio)
+        if (dragData.resizeCorner.includes('left')) newLeft = dragData.initialLeft + (dragData.initialWidth - newWidth);
         if (dragData.resizeCorner.includes('top')) {
              const newHeight = newWidth / aspect;
-             const heightDiff = newHeight - dragData.initialHeight;
-             newTop = dragData.initialTop - heightDiff;
+             newTop = dragData.initialTop - (newHeight - dragData.initialHeight);
         }
-
         playerReference.style.setProperty('width', `${newWidth}px`, 'important');
         playerReference.style.setProperty('left', `${newLeft}px`, 'important');
         playerReference.style.setProperty('top', `${newTop}px`, 'important');
-        // Height is auto (aspect-ratio)
-
-        // Update current setting temporarily for visual feedback if needed, 
-        // but main update happens on mouse up.
     } else if (dragData.isDragging) {
         playerReference.style.setProperty('top', `${dragData.initialTop + dy}px`, 'important');
         playerReference.style.setProperty('left', `${dragData.initialLeft + dx}px`, 'important');
@@ -444,55 +372,25 @@ function onMouseMove(e) {
 
 function onMouseUp(e) {
     if (!dragData.isDragging && !dragData.isResizing) return;
-    
-    // If we moved/resized
     if (dragData.hasMoved) {
         dragData.isClickSuppressed = true;
-        
-        // 1. Calculate new Position / Size
         const rect = playerReference.getBoundingClientRect();
-        
-        if (currentSettings.pinMode === 'free') {
-            currentSettings.freePosition = { top: rect.top, left: rect.left };
-        } else {
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            const winWidth = window.innerWidth;
-            const winHeight = window.innerHeight;
-
-            let newPosition = '';
-            if (centerY < winHeight / 2) {
-                newPosition = (centerX < winWidth / 2) ? 'top-left' : 'top-right';
-            } else {
-                newPosition = (centerX < winWidth / 2) ? 'bottom-left' : 'bottom-right';
-            }
-            currentSettings.position = newPosition;
+        if (currentSettings.pinMode === 'free') currentSettings.freePosition = { top: rect.top, left: rect.left };
+        else {
+            const winWidth = window.innerWidth, winHeight = window.innerHeight;
+            if ((rect.top + rect.height / 2) < winHeight / 2) currentSettings.position = (rect.left + rect.width / 2 < winWidth / 2) ? 'top-left' : 'top-right';
+            else currentSettings.position = (rect.left + rect.width / 2 < winWidth / 2) ? 'bottom-left' : 'bottom-right';
         }
-
-        if (dragData.isResizing) {
-            currentSettings.size = rect.width;
-        }
-
-        // 2. Remove inline styles so applySettings can take over
+        if (dragData.isResizing) currentSettings.size = rect.width;
         playerReference.style.removeProperty('top');
         playerReference.style.removeProperty('left');
         playerReference.style.removeProperty('bottom');
         playerReference.style.removeProperty('right');
         playerReference.style.removeProperty('width');
-        
-        // 3. Apply Settings (Snaps to nearest corner or stays at free position with updated size)
         applySettings(currentSettings);
-        
-        // 4. Show Save Button
-        requestAnimationFrame(() => {
-            showSaveButton();
-        });
-        
-        // 5. Trigger Resize Event
+        requestAnimationFrame(showSaveButton);
         window.dispatchEvent(new Event('resize'));
     }
-    
     dragData.isDragging = false;
     dragData.isResizing = false;
     dragData.resizeCorner = null;
@@ -502,98 +400,58 @@ function onClick(e) {
     if (dragData.isClickSuppressed) {
         e.preventDefault();
         e.stopPropagation();
-        dragData.isClickSuppressed = false; // Reset after suppressing one click
+        dragData.isClickSuppressed = false;
         return false;
     }
 }
 
 function pinPlayer() {
-  if (isPinnedActive) return;
-  if (!playerReference || !parentReference) return;
+  if (isPinnedActive || !playerReference || !parentReference) return;
+  const video = playerReference.querySelector('video');
+  if (video && video.readyState === 0) return;
 
-  const videoElement = playerReference.querySelector('video');
-  if (videoElement && videoElement.readyState === 0) {
-    return;
-  }
-
-  // 1. Insert placeholder
   const rect = playerReference.getBoundingClientRect();
   placeholder.style.height = `${rect.height}px`;
   parentReference.insertBefore(placeholder, playerReference);
-
-  // 2. Move player to body
   document.body.appendChild(playerReference);
   playerReference.classList.add("you-utility-pinned");
-  
-  // 3. Add Close Button
   if (!closeButton) closeButton = createCloseButton();
   playerReference.appendChild(closeButton);
-
-  // 4. Add Buttons (Save/Mode) - Only create if not exists
-  if (!saveButton) {
-      saveButton = createSaveButton();
-  }
-  if (!modeToggleButton) {
-      modeToggleButton = createModeToggleButton();
-  }
-
-  // 5. Add Resize Handles
+  if (!saveButton) saveButton = createSaveButton();
+  if (!modeToggleButton) modeToggleButton = createModeToggleButton();
   resizeHandles = createResizeHandles();
-  resizeHandles.forEach(handle => playerReference.appendChild(handle));
-
-  // 6. Add Listeners
+  resizeHandles.forEach(h => playerReference.appendChild(h));
   playerReference.addEventListener('mousedown', onMouseDown);
   playerReference.addEventListener('click', onClick, true); 
   document.addEventListener('mousemove', onMouseMove);
   document.addEventListener('mouseup', onMouseUp);
-
   isPinnedActive = true;
+  syncSettingsToMainWorld(currentSettings);
   window.dispatchEvent(new Event('resize'));
 }
 
 function unpinPlayer() {
   if (!isPinnedActive && !document.querySelector('.you-utility-pinned')) return;
-  if (!playerReference || !parentReference) return;
-
-  // 1. Remove Listeners
   playerReference.removeEventListener('mousedown', onMouseDown);
   playerReference.removeEventListener('click', onClick, true);
   document.removeEventListener('mousemove', onMouseMove);
   document.removeEventListener('mouseup', onMouseUp);
-
-  // 2. Remove Elements
-  if (closeButton && closeButton.parentNode) closeButton.remove();
-  
-  if (saveButton && saveButton.parentNode) {
-      saveButton.remove();
-      saveButton = null; 
-  }
-  if (modeToggleButton && modeToggleButton.parentNode) {
-      modeToggleButton.remove();
-      modeToggleButton = null;
-  }
-  
-  resizeHandles.forEach(handle => {
-      if (handle.parentNode) handle.remove();
-  });
+  if (closeButton?.parentNode) closeButton.remove();
+  if (saveButton?.parentNode) { saveButton.remove(); saveButton = null; }
+  if (modeToggleButton?.parentNode) { modeToggleButton.remove(); modeToggleButton = null; }
+  resizeHandles.forEach(h => h.parentNode?.remove());
   resizeHandles = [];
-
-  // 3. Clean up styles
   playerReference.style.removeProperty('top');
   playerReference.style.removeProperty('left');
   playerReference.style.removeProperty('bottom');
   playerReference.style.removeProperty('right');
   playerReference.style.removeProperty('width');
-
-  // 4. Move player back
   if (placeholder.parentNode === parentReference) {
       parentReference.insertBefore(playerReference, placeholder);
       placeholder.remove();
-  } else {
-      parentReference.appendChild(playerReference);
-  }
-
+  } else parentReference.appendChild(playerReference);
   playerReference.classList.remove("you-utility-pinned");
   isPinnedActive = false;
+  syncSettingsToMainWorld(currentSettings);
   window.dispatchEvent(new Event('resize'));
 }
