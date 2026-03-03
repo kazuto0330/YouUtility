@@ -16,8 +16,19 @@ function getVideoId(player) {
 
 // Listen for settings from the Isolated World (content.js)
 window.addEventListener('YouUtilitySettingsUpdate', (e) => {
+    const oldSettings = resSettings;
     resSettings = e.detail;
+    
     if (resSettings && resSettings.autoResolution) {
+        // 設定が変更された場合は、再適用を許可するためにキャッシュをクリア
+        if (!oldSettings || 
+            oldSettings.mainResolution !== resSettings.mainResolution ||
+            JSON.stringify(oldSettings.fallbackResolutions) !== JSON.stringify(resSettings.fallbackResolutions) ||
+            oldSettings.isMiniPlayerActive !== resSettings.isMiniPlayerActive ||
+            oldSettings.playlistResolution !== resSettings.playlistResolution ||
+            oldSettings.miniPlayerResolution !== resSettings.miniPlayerResolution) {
+            lastAppliedVideoId = null;
+        }
         setTimeout(updateResolutionMain, 500);
     }
     // Re-setup volume wheel listener if settings changed
@@ -32,6 +43,9 @@ function updateResolutionMain() {
 
     const currentVideoId = getVideoId(player);
     if (!currentVideoId) return;
+
+    // すでにこの動画に対して解像度を適用済みの場合はスキップ
+    if (currentVideoId === lastAppliedVideoId) return;
 
     const currentRes = player.getPlaybackQuality();
     const availableLevels = player.getAvailableQualityLevels();
