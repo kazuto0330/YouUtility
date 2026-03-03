@@ -161,6 +161,25 @@
             </div>
           </div>
         </div>
+      <section class="card">
+        <div class="section-header">
+          <h2 data-i18n="volumeWheelControl">Mouse Wheel Volume Control</h2>
+          <label class="switch">
+            <input type="checkbox" id="volume-wheel-toggle">
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="setting-group" id="volume-settings-content">
+          <div class="setting-group">
+            <label for="volume-step-input" data-i18n="volumeStep">Volume change per step (%)</label>
+            <div class="input-wrapper">
+              <input type="number" id="volume-step-input" min="1" max="50" step="1">
+              <span>%</span>
+            </div>
+            <input type="range" id="volume-step-slider" min="1" max="50" step="1">
+          </div>
+        </div>
       </section>
     </main>
   </div>
