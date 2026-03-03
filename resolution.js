@@ -3,7 +3,13 @@ let resSettings = null;
 let isApplying = false;
 let lastAppliedVideoId = null;
 
-function getVideoId() {
+function getVideoId(player) {
+    if (player && player.getVideoData) {
+        const data = player.getVideoData();
+        if (data && data.video_id) {
+            return data.video_id;
+        }
+    }
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('v');
 }
@@ -19,50 +25,45 @@ window.addEventListener('YouUtilitySettingsUpdate', (e) => {
 function updateResolutionMain() {
     if (!resSettings || !resSettings.autoResolution || isApplying) return;
 
-    const currentVideoId = getVideoId();
-    if (!currentVideoId || currentVideoId === lastAppliedVideoId) return;
-
     const player = document.querySelector("#movie_player");
     if (!player || !player.getAvailableQualityLevels) return;
+
+    const currentVideoId = getVideoId(player);
+    if (!currentVideoId || currentVideoId === lastAppliedVideoId) return;
 
     const currentRes = player.getPlaybackQuality();
     const availableLevels = player.getAvailableQualityLevels();
     
-    if (availableLevels.length === 0) return;
+    if (!availableLevels || availableLevels.length === 0) return;
 
     const isPlaylist = window.location.href.includes("list=");
-    let targetRes = isPlaylist ? resSettings.playlistResolution : resSettings.mainResolution;
     
-    if (!availableLevels.includes(targetRes)) {
-        if (!isPlaylist) {
-            for (const res of resSettings.fallbackResolutions) {
-                if (availableLevels.includes(res)) {
-                    targetRes = res;
-                    break;
-                }
-            }
-        } else {
-            if (availableLevels.includes(resSettings.mainResolution)) {
-                targetRes = resSettings.mainResolution;
-            } else {
-                for (const res of resSettings.fallbackResolutions) {
-                    if (availableLevels.includes(res)) {
-                        targetRes = res;
-                        break;
-                    }
-                }
-            }
+    // 優先順位に基づいて解像度を探す
+    const priorityList = [];
+    if (isPlaylist && resSettings.playlistResolution) {
+        priorityList.push(resSettings.playlistResolution);
+    }
+    if (resSettings.mainResolution) {
+        priorityList.push(resSettings.mainResolution);
+    }
+    if (resSettings.fallbackResolutions && Array.isArray(resSettings.fallbackResolutions)) {
+        priorityList.push(...resSettings.fallbackResolutions);
+    }
+
+    let targetRes = null;
+    for (const res of priorityList) {
+        if (availableLevels.includes(res)) {
+            targetRes = res;
+            break;
         }
     }
 
-    if (currentRes === targetRes) {
+    if (!targetRes || currentRes === targetRes) {
         lastAppliedVideoId = currentVideoId;
         return;
     }
 
-    if (availableLevels.includes(targetRes)) {
-        applyResolution(player, targetRes, currentVideoId);
-    }
+    applyResolution(player, targetRes, currentVideoId);
 }
 
 function applyResolution(player, target, videoId) {
@@ -75,13 +76,21 @@ function applyResolution(player, target, videoId) {
             player.setPlaybackQuality(target);
         }
 
-        const ytConfig = JSON.parse(localStorage.getItem('yt-player-quality') || '{}');
-        ytConfig.data = target;
-        ytConfig.expiration = Date.now() + 24 * 60 * 60 * 1000;
-        localStorage.setItem('yt-player-quality', JSON.stringify(ytConfig));
+        // LocalStorageの更新 (安全性向上)
+        try {
+            const rawConfig = localStorage.getItem('yt-player-quality');
+            const ytConfig = rawConfig ? JSON.parse(rawConfig) : {};
+            ytConfig.data = target;
+            ytConfig.expiration = Date.now() + 24 * 60 * 60 * 1000;
+            ytConfig.creation = Date.now();
+            localStorage.setItem('yt-player-quality', JSON.stringify(ytConfig));
+        } catch (e) {
+            console.warn("YouUtility: Failed to parse or set localStorage 'yt-player-quality'", e);
+        }
         
         lastAppliedVideoId = videoId;
     } catch (e) {
+        console.warn("YouUtility: Failed to apply resolution", e);
     } finally {
         setTimeout(() => {
             isApplying = false;
@@ -89,14 +98,17 @@ function applyResolution(player, target, videoId) {
     }
 }
 
+// YouTubeのSPAナビゲーション完了イベント
 window.addEventListener('yt-navigate-finish', () => {
-    setTimeout(updateResolutionMain, 1000);
+    lastAppliedVideoId = null;
+    setTimeout(updateResolutionMain, 500);
 });
 
 function initPlayerMonitor() {
     const player = document.querySelector("#movie_player");
     if (player && player.addEventListener) {
         player.addEventListener('onStateChange', (state) => {
+            // 1: PLAYING, 3: BUFFERING
             if (state === 1 || state === 3) {
                 updateResolutionMain();
             }
