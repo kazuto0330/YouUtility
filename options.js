@@ -357,4 +357,27 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // --- 動的レイアウト調整 ---
+  const generalCard = document.getElementById('card-general');
+  const mainContainer = document.getElementById('main-container');
+  const rightColumn = document.getElementById('right-column');
+
+  function adjustLayout() {
+    if (window.innerWidth <= 800) {
+      // 800px以下の場合は、一般カードをコンテナの最上部に移動
+      if (generalCard.parentElement !== mainContainer) {
+        mainContainer.prepend(generalCard);
+      }
+    } else {
+      // 800pxより大きい場合は、一般カードを右カラムの先頭に戻す
+      if (generalCard.parentElement !== rightColumn) {
+        rightColumn.prepend(generalCard);
+      }
+    }
+  }
+
+  // 初期化時とリサイズ時に実行
+  adjustLayout();
+  window.addEventListener('resize', adjustLayout);
 });

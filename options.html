@@ -12,101 +12,105 @@
       <h1>YouUtility Setting</h1>
     </header>
 
-    <main>
-      <section class="card">
-        <h2 data-i18n="general">General</h2>
-        
-        <div class="setting-row">
-          <label data-i18n="language">Language</label>
-          <select id="lang-select">
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-          </select>
-        </div>
-
-        <div class="setting-row">
-          <label data-i18n="theme">Theme</label>
-          <select id="theme-select">
-            <option value="system" data-i18n="themeSystem">System Default</option>
-            <option value="light" data-i18n="themeLight">Light</option>
-            <option value="dark" data-i18n="themeDark">Dark</option>
-          </select>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-header">
-          <h2 data-i18n="playerAppearance">Mini Video Player Settings</h2>
-          <label class="switch">
-            <input type="checkbox" id="pin-toggle">
-            <span class="slider round"></span>
-          </label>
-        </div>
-        
-        <div class="setting-group">
-          <label data-i18n="pinMode">Pin Mode</label>
-          <div class="mode-select">
-            <button class="mode-btn" data-mode="corner" data-i18n="modeCorner">Corner</button>
-            <button class="mode-btn" data-mode="free" data-i18n="modeFree">Free Position</button>
+    <main class="settings-grid" id="main-container">
+      <div class="column" id="left-column">
+        <!-- ミニ動画プレイヤー設定 -->
+        <section class="card" id="card-player">
+          <div class="section-header">
+            <h2 data-i18n="playerAppearance">Mini Video Player Settings</h2>
+            <label class="switch">
+              <input type="checkbox" id="pin-toggle">
+              <span class="slider round"></span>
+            </label>
           </div>
-        </div>
-
-        <div class="setting-group" id="position-setting">
-          <label data-i18n="position">Position</label>
-          <div class="position-grid" id="position-grid">
-            <button class="pos-btn" data-pos="top-left" aria-label="Top Left"></button>
-            <button class="pos-btn" data-pos="top-right" aria-label="Top Right"></button>
-            <button class="pos-btn" data-pos="bottom-left" aria-label="Bottom Left"></button>
-            <button class="pos-btn" data-pos="bottom-right" aria-label="Bottom Right"></button>
+          
+          <div class="setting-group">
+            <label data-i18n="pinMode">Pin Mode</label>
+            <div class="mode-select">
+              <button class="mode-btn" data-mode="corner" data-i18n="modeCorner">Corner</button>
+              <button class="mode-btn" data-mode="free" data-i18n="modeFree">Free Position</button>
+            </div>
           </div>
-          <div id="free-coords-display" class="coords-display" style="display: none;">
-            <p><span data-i18n="currentPosition">Current Position:</span></p>
-            <p>X: <span id="coord-x">0</span>px, Y: <span id="coord-y">0</span>px</p>
-          </div>
-        </div>
 
-        <div class="setting-group">
-          <label for="size-input" data-i18n="size">Size (Width in px)</label>
-          <div class="input-wrapper">
-            <input type="number" id="size-input" min="200" max="1000" step="10">
-            <span>px</span>
-          </div>
-          <input type="range" id="size-slider" min="200" max="1000" step="10">
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="section-header">
-          <h2 data-i18n="resolutionSettings">Resolution Settings</h2>
-          <label class="switch">
-            <input type="checkbox" id="auto-res-toggle">
-            <span class="slider round"></span>
-          </label>
-        </div>
-
-        <div class="setting-group" id="res-settings-content">
-          <div class="setting-row">
-            <label data-i18n="mainResolution">Main Resolution</label>
-            <select id="main-res-select">
-              <option value="hd2160">2160p (4K)</option>
-              <option value="hd1440">1440p (2K)</option>
-              <option value="hd1080">1080p (HD)</option>
-              <option value="hd720">720p (HD)</option>
-              <option value="large">480p</option>
-              <option value="medium">360p</option>
-              <option value="small">240p</option>
-              <option value="tiny">144p</option>
-            </select>
+          <div class="setting-group" id="position-setting">
+            <label data-i18n="position">Position</label>
+            <div class="position-grid" id="position-grid">
+              <button class="pos-btn" data-pos="top-left" aria-label="Top Left"></button>
+              <button class="pos-btn" data-pos="top-right" aria-label="Top Right"></button>
+              <button class="pos-btn" data-pos="bottom-left" aria-label="Bottom Left"></button>
+              <button class="pos-btn" data-pos="bottom-right" aria-label="Bottom Right"></button>
+            </div>
+            <div id="free-coords-display" class="coords-display" style="display: none;">
+              <p><span data-i18n="currentPosition">Current Position:</span></p>
+              <p>X: <span id="coord-x">0</span>px, Y: <span id="coord-y">0</span>px</p>
+            </div>
           </div>
 
           <div class="setting-group">
-            <label data-i18n="fallbackResolutions">Fallback Resolutions (Priority order)</label>
-            <div class="fallback-container">
-              <div id="fallback-res-list" class="fallback-list-dynamic">
-                <!-- Items will be added here dynamically -->
+            <label for="size-input" data-i18n="size">Size (Width in px)</label>
+            <div class="input-wrapper">
+              <input type="number" id="size-input" min="200" max="1000" step="10">
+              <span>px</span>
+            </div>
+            <input type="range" id="size-slider" min="200" max="1000" step="10">
+          </div>
+        </section>
+
+        <!-- 解像度設定 -->
+        <section class="card" id="card-resolution">
+          <div class="section-header">
+            <h2 data-i18n="resolutionSettings">Resolution Settings</h2>
+            <label class="switch">
+              <input type="checkbox" id="auto-res-toggle">
+              <span class="slider round"></span>
+            </label>
+          </div>
+
+          <div class="setting-group" id="res-settings-content">
+            <div class="setting-row">
+              <label data-i18n="mainResolution">Main Resolution</label>
+              <select id="main-res-select">
+                <option value="hd2160">2160p (4K)</option>
+                <option value="hd1440">1440p (2K)</option>
+                <option value="hd1080">1080p (HD)</option>
+                <option value="hd720">720p (HD)</option>
+                <option value="large">480p</option>
+                <option value="medium">360p</option>
+                <option value="small">240p</option>
+                <option value="tiny">144p</option>
+              </select>
+            </div>
+
+            <div class="setting-group">
+              <label data-i18n="fallbackResolutions">Fallback Resolutions (Priority order)</label>
+              <div class="fallback-container">
+                <div id="fallback-res-list" class="fallback-list-dynamic">
+                  <!-- Items will be added here dynamically -->
+                </div>
+                <div class="add-fallback-row">
+                  <select id="add-res-select">
+                    <option value="hd2160">2160p (4K)</option>
+                    <option value="hd1440">1440p (2K)</option>
+                    <option value="hd1080">1080p (HD)</option>
+                    <option value="hd720">720p (HD)</option>
+                    <option value="large">480p</option>
+                    <option value="medium">360p</option>
+                    <option value="small">240p</option>
+                    <option value="tiny">144p</option>
+                  </select>
+                  <button id="add-res-btn" class="add-btn">+</button>
+                </div>
               </div>
-              <div class="add-fallback-row">
-                <select id="add-res-select">
+            </div>
+
+            <div class="setting-row">
+              <label data-i18n="playlistResolution">Playlist Resolution</label>
+              <div class="input-wrapper">
+                <label class="switch small">
+                  <input type="checkbox" id="playlist-res-toggle">
+                  <span class="slider round"></span>
+                </label>
+                <select id="playlist-res-select">
                   <option value="hd2160">2160p (4K)</option>
                   <option value="hd1440">1440p (2K)</option>
                   <option value="hd1080">1080p (HD)</option>
@@ -116,71 +120,77 @@
                   <option value="small">240p</option>
                   <option value="tiny">144p</option>
                 </select>
-                <button id="add-res-btn" class="add-btn">+</button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <label data-i18n="miniPlayerResolution">Mini Player Resolution</label>
+              <div class="input-wrapper">
+                <label class="switch small">
+                  <input type="checkbox" id="mini-res-toggle">
+                  <span class="slider round"></span>
+                </label>
+                <select id="mini-res-select">
+                  <option value="hd2160">2160p (4K)</option>
+                  <option value="hd1440">1440p (2K)</option>
+                  <option value="hd1080">1080p (HD)</option>
+                  <option value="hd720">720p (HD)</option>
+                  <option value="large">480p</option>
+                  <option value="medium">360p</option>
+                  <option value="small">240p</option>
+                  <option value="tiny">144p</option>
+                </select>
               </div>
             </div>
           </div>
+        </section>
+      </div>
 
+      <div class="column" id="right-column">
+        <!-- 一般設定 -->
+        <section class="card" id="card-general">
+          <h2 data-i18n="general">General</h2>
+          
           <div class="setting-row">
-            <label data-i18n="playlistResolution">Playlist Resolution</label>
-            <div class="input-wrapper">
-              <label class="switch small">
-                <input type="checkbox" id="playlist-res-toggle">
-                <span class="slider round"></span>
-              </label>
-              <select id="playlist-res-select">
-                <option value="hd2160">2160p (4K)</option>
-                <option value="hd1440">1440p (2K)</option>
-                <option value="hd1080">1080p (HD)</option>
-                <option value="hd720">720p (HD)</option>
-                <option value="large">480p</option>
-                <option value="medium">360p</option>
-                <option value="small">240p</option>
-                <option value="tiny">144p</option>
-              </select>
-            </div>
+            <label data-i18n="language">Language</label>
+            <select id="lang-select">
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
           </div>
 
           <div class="setting-row">
-            <label data-i18n="miniPlayerResolution">Mini Player Resolution</label>
-            <div class="input-wrapper">
-              <label class="switch small">
-                <input type="checkbox" id="mini-res-toggle">
-                <span class="slider round"></span>
-              </label>
-              <select id="mini-res-select">
-                <option value="hd2160">2160p (4K)</option>
-                <option value="hd1440">1440p (2K)</option>
-                <option value="hd1080">1080p (HD)</option>
-                <option value="hd720">720p (HD)</option>
-                <option value="large">480p</option>
-                <option value="medium">360p</option>
-                <option value="small">240p</option>
-                <option value="tiny">144p</option>
-              </select>
-            </div>
+            <label data-i18n="theme">Theme</label>
+            <select id="theme-select">
+              <option value="system" data-i18n="themeSystem">System Default</option>
+              <option value="light" data-i18n="themeLight">Light</option>
+              <option value="dark" data-i18n="themeDark">Dark</option>
+            </select>
           </div>
-        </div>
-      <section class="card">
-        <div class="section-header">
-          <h2 data-i18n="volumeWheelControl">Mouse Wheel Volume Control</h2>
-          <label class="switch">
-            <input type="checkbox" id="volume-wheel-toggle">
-            <span class="slider round"></span>
-          </label>
-        </div>
+        </section>
 
-        <div class="setting-group" id="volume-settings-content">
-          <div class="setting-group">
-            <label for="volume-step-input" data-i18n="volumeStep">Volume change per step (%)</label>
-            <div class="input-wrapper">
-              <input type="number" id="volume-step-input" min="1" max="50" step="1">
-              <span>%</span>
-            </div>
-            <input type="range" id="volume-step-slider" min="1" max="50" step="1">
+        <!-- マウスホイール音量調整 -->
+        <section class="card" id="card-volume">
+          <div class="section-header">
+            <h2 data-i18n="volumeWheelControl">Mouse Wheel Volume Control</h2>
+            <label class="switch">
+              <input type="checkbox" id="volume-wheel-toggle">
+              <span class="slider round"></span>
+            </label>
           </div>
-        </div>
-      </section>
+
+          <div class="setting-group" id="volume-settings-content">
+            <div class="setting-group">
+              <label for="volume-step-input" data-i18n="volumeStep">Volume change per step (%)</label>
+              <div class="input-wrapper">
+                <input type="number" id="volume-step-input" min="1" max="50" step="1">
+                <span>%</span>
+              </div>
+              <input type="range" id="volume-step-slider" min="1" max="50" step="1">
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
   <script src="options.js"></script>

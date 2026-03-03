@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouUtility - ミニ動画プレイヤー",
-  "version": "1.0.7.1",
+  "version": "1.0.8",
   "description": "YouTubeの動画プレイヤーをスクロール時に画面端に固定し、ミニ動画プレイヤーとして表示します。",
   "permissions": ["activeTab", "scripting", "storage"],
   "action": {

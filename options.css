@@ -29,13 +29,37 @@ body {
 
 .container {
   width: 100%;
-  max-width: 600px;
+  max-width: 1000px;
 }
 
 header h1 {
   font-size: 28px;
   font-weight: 700;
   margin-bottom: 24px;
+  text-align: center;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 800px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .container {
+    max-width: 600px;
+  }
 }
 
 .card {
