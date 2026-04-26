@@ -11,9 +11,7 @@ const DEFAULT_SETTINGS = {
   playlistResolution: 'hd720',
   enablePlaylistResolution: false,
   miniPlayerResolution: 'medium',
-  enableMiniPlayerResolution: false,
-  enableVolumeWheel: true,
-  volumeStep: 5
+  enableMiniPlayerResolution: false
 };
 
 const TRANSLATIONS = {
@@ -35,9 +33,7 @@ const TRANSLATIONS = {
     mainResolution: 'Main Resolution',
     fallbackResolutions: 'Fallback Resolutions (Priority order)',
     playlistResolution: 'Playlist Resolution',
-    miniPlayerResolution: 'miniPlayerResolution',
-    volumeWheelControl: 'Mouse Wheel Volume Control',
-    volumeStep: 'Volume change per step (%)'
+    miniPlayerResolution: 'Mini Player Resolution'
   },
   ja: {
     general: '一般',
@@ -57,9 +53,7 @@ const TRANSLATIONS = {
     mainResolution: 'メインの解像度',
     fallbackResolutions: 'フォールバック解像度 (優先順)',
     playlistResolution: 'リスト再生時の解像度',
-    miniPlayerResolution: 'ミニ動画プレイヤー再生時の解像度',
-    volumeWheelControl: 'マウスホイール音量調整',
-    volumeStep: '音量変化量 (%)'
+    miniPlayerResolution: 'ミニ動画プレイヤー再生時の解像度'
   }
 };
 
@@ -98,18 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const miniResToggle = document.getElementById('mini-res-toggle');
   const miniResSelect = document.getElementById('mini-res-select');
 
-  const volumeWheelToggle = document.getElementById('volume-wheel-toggle');
-  const volumeStepInput = document.getElementById('volume-step-input');
-  const volumeStepSlider = document.getElementById('volume-step-slider');
-  const volumeSettingsContent = document.getElementById('volume-settings-content');
-
   const resSettingsContent = document.getElementById('res-settings-content');
   const fallbackResList = document.getElementById('fallback-res-list');
   const addResSelect = document.getElementById('add-res-select');
   const addResBtn = document.getElementById('add-res-btn');
 
   // Load Settings
-  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution', 'enableVolumeWheel', 'volumeStep'], (result) => {
+  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
     let lang = result.lang;
     if (!lang) {
       const browserLang = navigator.language || navigator.userLanguage; 
@@ -136,12 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     miniResToggle.checked = settings.enableMiniPlayerResolution;
     miniResSelect.value = settings.miniPlayerResolution;
-
-    // Volume UI
-    volumeWheelToggle.checked = settings.enableVolumeWheel;
-    volumeStepInput.value = settings.volumeStep;
-    volumeStepSlider.value = settings.volumeStep;
-    updateVolumeUI(settings.enableVolumeWheel);
 
     currentFallbackList = settings.fallbackResolutions || [];
     renderFallbackList();
@@ -203,22 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   miniResToggle.addEventListener('change', () => saveAndSync({ enableMiniPlayerResolution: miniResToggle.checked }));
   miniResSelect.addEventListener('change', () => saveAndSync({ miniPlayerResolution: miniResSelect.value }));
-
-  // Volume Listeners
-  volumeWheelToggle.addEventListener('change', () => {
-    updateVolumeUI(volumeWheelToggle.checked);
-    saveAndSync({ enableVolumeWheel: volumeWheelToggle.checked });
-  });
-  volumeStepInput.addEventListener('change', () => {
-    const val = parseInt(volumeStepInput.value);
-    volumeStepSlider.value = val;
-    saveAndSync({ volumeStep: val });
-  });
-  volumeStepSlider.addEventListener('input', () => {
-    const val = parseInt(volumeStepSlider.value);
-    volumeStepInput.value = val;
-    saveAndSync({ volumeStep: val });
-  });
 
   addResBtn.addEventListener('click', () => {
     const res = addResSelect.value;
@@ -303,11 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else resSettingsContent.classList.add('disabled');
   }
 
-  function updateVolumeUI(enabled) {
-    if (enabled) volumeSettingsContent.classList.remove('disabled');
-    else volumeSettingsContent.classList.add('disabled');
-  }
-
   function updatePositionUI(position) {
     posBtns.forEach(btn => {
       if (btn.dataset.pos === position) btn.classList.add('active');
@@ -357,27 +319,4 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-
-  // --- 動的レイアウト調整 ---
-  const generalCard = document.getElementById('card-general');
-  const mainContainer = document.getElementById('main-container');
-  const rightColumn = document.getElementById('right-column');
-
-  function adjustLayout() {
-    if (window.innerWidth <= 800) {
-      // 800px以下の場合は、一般カードをコンテナの最上部に移動
-      if (generalCard.parentElement !== mainContainer) {
-        mainContainer.prepend(generalCard);
-      }
-    } else {
-      // 800pxより大きい場合は、一般カードを右カラムの先頭に戻す
-      if (generalCard.parentElement !== rightColumn) {
-        rightColumn.prepend(generalCard);
-      }
-    }
-  }
-
-  // 初期化時とリサイズ時に実行
-  adjustLayout();
-  window.addEventListener('resize', adjustLayout);
 });
