@@ -2,6 +2,7 @@
 let resSettings = null;
 let isApplying = false;
 let lastAppliedVideoId = null;
+let userManuallyChangedVideoId = null;
 
 function getVideoId(player) {
     if (player && player.getVideoData) {
@@ -30,6 +31,8 @@ function updateResolutionMain() {
 
     const currentVideoId = getVideoId(player);
     if (!currentVideoId) return;
+
+    if (currentVideoId === userManuallyChangedVideoId) return;
 
     const currentRes = player.getPlaybackQuality();
     const availableLevels = player.getAvailableQualityLevels();
@@ -104,6 +107,7 @@ function applyResolution(player, target, videoId) {
 // YouTubeのSPAナビゲーション完了イベント
 window.addEventListener('yt-navigate-finish', () => {
     lastAppliedVideoId = null;
+    userManuallyChangedVideoId = null;
     setTimeout(updateResolutionMain, 500);
 });
 
@@ -114,6 +118,14 @@ function initPlayerMonitor() {
             // 1: PLAYING, 3: BUFFERING
             if (state === 1 || state === 3) {
                 updateResolutionMain();
+            }
+        });
+        player.addEventListener('onPlaybackQualityChange', (quality) => {
+            if (!isApplying) {
+                const currentVideoId = getVideoId(player);
+                if (currentVideoId && currentVideoId === lastAppliedVideoId) {
+                    userManuallyChangedVideoId = currentVideoId;
+                }
             }
         });
     } else {
