@@ -3,14 +3,27 @@
  */
 class YoutubePlayer {
     constructor() {
-        this.player = document.querySelector("#movie_player");
+        this.player = this.findPlayer();
+    }
+
+    /**
+     * 【特殊な実装】通常の動画プレイヤーに加え、YouTube Shortsの
+     * アクティブなプレイヤー要素（ytd-reel-video-renderer[is-active]内など）も
+     * 優先して取得できるようにフォールバックを持つ検索関数。
+     */
+    findPlayer() {
+        const activeShortsPlayer = document.querySelector('ytd-reel-video-renderer[is-active] #movie_player') ||
+                                   document.querySelector('ytd-reel-video-renderer[is-active] .html5-video-player') ||
+                                   document.querySelector('#shorts-player');
+        if (activeShortsPlayer) return activeShortsPlayer;
+        return document.querySelector("#movie_player");
     }
 
     /**
      * プレイヤーがDOMに存在するか判定。
      */
     exists() {
-        this.player = document.querySelector("#movie_player");
+        this.player = this.findPlayer();
         return !!this.player;
     }
 
@@ -34,7 +47,15 @@ class YoutubePlayer {
             }
         }
         const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('v');
+        const v = urlParams.get('v');
+        if (v) return v;
+
+        // 【特殊な実装】YouTube ShortsのURLパス（/shorts/VIDEO_ID）から動画IDを抽出
+        const match = window.location.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
+        if (match) {
+            return match[1];
+        }
+        return null;
     }
 
     /**

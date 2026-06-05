@@ -10,8 +10,22 @@ class PlaybackMonitor {
      */
     constructor(callbacks) {
         this.callbacks = callbacks;
-        this.playerListenerAttached = false;
+        this.attachedPlayerElement = null;
         this.checkTimer = null;
+        this.urlCheckTimer = null;
+    }
+
+    /**
+     * 【特殊な実装】通常の動画プレイヤーに加え、YouTube Shortsの
+     * アクティブなプレイヤー要素（ytd-reel-video-renderer[is-active]内など）も
+     * 優先して取得できるようにフォールバックを持つ検索関数。
+     */
+    findPlayerElement() {
+        const activeShortsPlayer = document.querySelector('ytd-reel-video-renderer[is-active] #movie_player') ||
+                                   document.querySelector('ytd-reel-video-renderer[is-active] .html5-video-player') ||
+                                   document.querySelector('#shorts-player');
+        if (activeShortsPlayer) return activeShortsPlayer;
+        return document.querySelector("#movie_player");
     }
 
     /**
@@ -20,6 +34,8 @@ class PlaybackMonitor {
     start() {
         // YouTubeのSPAナビゲーション完了イベント
         window.addEventListener('yt-navigate-finish', () => {
+            this.attachedPlayerElement = null; // ナビゲーション時は登録をリセット
+            this.startPlayerPolling();
             if (typeof this.callbacks.onTrigger === 'function') {
                 this.callbacks.onTrigger({ reason: 'navigate-finish' });
             }
@@ -32,6 +48,21 @@ class PlaybackMonitor {
             }
         });
 
+        // 【特殊な実装】YouTube Shorts等でスワイプして動画を切り替えた際に
+        // SPAナビゲーションイベント（yt-navigate-finish）が正しく発火しない場合があるため、
+        // URLの書き換わりを定期的に検知する監視タイマーを設置する。
+        let lastUrl = window.location.href;
+        this.urlCheckTimer = setInterval(() => {
+            if (window.location.href !== lastUrl) {
+                lastUrl = window.location.href;
+                this.attachedPlayerElement = null; // 新しいプレイヤーをアタッチできるようにクリア
+                this.startPlayerPolling();
+                if (typeof this.callbacks.onTrigger === 'function') {
+                    this.callbacks.onTrigger({ reason: 'navigate-finish' });
+                }
+            }
+        }, 500);
+
         // 【特殊な実装】YouTubeの動画プレイヤー要素は遅延ロードされる可能性があるため、
         // 定期的にポーリングしてプレイヤーの生成を検知し、イベントをアタッチする。
         this.startPlayerPolling();
@@ -42,13 +73,17 @@ class PlaybackMonitor {
      * 準備ができたら内部イベントリスナーを登録する。
      */
     startPlayerPolling() {
-        const player = document.querySelector("#movie_player");
+        const player = this.findPlayerElement();
         
         // プレイヤーが存在し、addEventListener があれば登録
+        // すでにアタッチされているプレイヤーとは異なる場合のみ再セットアップする
         if (player && typeof player.addEventListener === 'function') {
-            this.setupPlayerListeners(player);
+            if (this.attachedPlayerElement !== player) {
+                this.setupPlayerListeners(player);
+            }
         } else {
             // 見つかるまで1秒おきにリトライ
+            if (this.checkTimer) clearTimeout(this.checkTimer);
             this.checkTimer = setTimeout(() => this.startPlayerPolling(), 1000);
         }
     }
@@ -58,7 +93,7 @@ class PlaybackMonitor {
      * @param {HTMLElement} player - YouTubeプレイヤー要素
      */
     setupPlayerListeners(player) {
-        if (this.playerListenerAttached) return;
+        if (this.attachedPlayerElement === player) return;
 
         try {
             // 再生状態変更（1: 再生中, 3: バッファリング中）をトリガーに適用を試みる
@@ -77,11 +112,12 @@ class PlaybackMonitor {
                 }
             });
 
-            this.playerListenerAttached = true;
+            this.attachedPlayerElement = player;
         } catch (e) {
             console.warn("YouUtility: Failed to setup player internal listeners", e);
-            // 登録に失敗した場合はリトライさせるためにフラグをfalseにし、ポーリングを再開
-            this.playerListenerAttached = false;
+            // 登録に失敗した場合はリトライさせるためにアタッチ履歴をクリアし、ポーリングを再開
+            this.attachedPlayerElement = null;
+            if (this.checkTimer) clearTimeout(this.checkTimer);
             this.checkTimer = setTimeout(() => this.startPlayerPolling(), 2000);
         }
     }
@@ -92,6 +128,9 @@ class PlaybackMonitor {
     destroy() {
         if (this.checkTimer) {
             clearTimeout(this.checkTimer);
+        }
+        if (this.urlCheckTimer) {
+            clearInterval(this.urlCheckTimer);
         }
     }
 }
