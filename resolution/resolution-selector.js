@@ -26,14 +26,6 @@ class ResolutionSelector {
             priorityList.push(settings.playlistResolution);
         }
 
-        // 2. ミニ動画プレイヤー再生時の解像度 (★今回の実装では未実装にする要件のため、処理をスキップ)
-        // NOTE: 将来的にミニプレイヤーのアクティブ状態を判定する変数が settings 内に
-        // 渡された際、ここで評価して priorityList に追加する予定です。次のフェーズで実装します。
-        /*
-        if (settings.isMiniPlayerActive && settings.enableMiniPlayerResolution && settings.miniPlayerResolution) {
-            priorityList.push(settings.miniPlayerResolution);
-        }
-        */
 
         // 3. メインの解像度
         if (settings.mainResolution) {

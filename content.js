@@ -10,9 +10,7 @@ const DEFAULT_SETTINGS = {
   mainResolution: 'hd1080',
   fallbackResolutions: ['hd720', 'large'],
   playlistResolution: 'hd720',
-  enablePlaylistResolution: false,
-  miniPlayerResolution: 'medium',
-  enableMiniPlayerResolution: false
+  enablePlaylistResolution: false
 };
 
 const UI_TRANSLATIONS = {
@@ -66,7 +64,7 @@ function syncSettingsToMainWorld(settings) {
 }
 
 // Apply settings on load
-chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
+chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution'], (result) => {
   currentSettings = { ...DEFAULT_SETTINGS, ...result };
   applySettings(currentSettings);
   syncSettingsToMainWorld(currentSettings);

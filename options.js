@@ -9,9 +9,7 @@ const DEFAULT_SETTINGS = {
   mainResolution: 'hd1080',
   fallbackResolutions: ['hd720', 'large'],
   playlistResolution: 'hd720',
-  enablePlaylistResolution: false,
-  miniPlayerResolution: 'medium',
-  enableMiniPlayerResolution: false
+  enablePlaylistResolution: false
 };
 
 const TRANSLATIONS = {
@@ -32,8 +30,7 @@ const TRANSLATIONS = {
     resolutionSettings: 'Resolution',
     mainResolution: 'Main Resolution',
     fallbackResolutions: 'Fallback Resolutions (Priority order)',
-    playlistResolution: 'Playlist Resolution',
-    miniPlayerResolution: 'Mini Player Resolution'
+    playlistResolution: 'Playlist Resolution'
   },
   ja: {
     general: '一般',
@@ -52,8 +49,7 @@ const TRANSLATIONS = {
     resolutionSettings: '解像度',
     mainResolution: 'メインの解像度',
     fallbackResolutions: 'フォールバック解像度 (優先順)',
-    playlistResolution: 'リスト再生時の解像度',
-    miniPlayerResolution: 'ミニ動画プレイヤー再生時の解像度'
+    playlistResolution: 'リスト再生時の解像度'
   }
 };
 
@@ -89,8 +85,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   const playlistResToggle = document.getElementById('playlist-res-toggle');
   const playlistResSelect = document.getElementById('playlist-res-select');
-  const miniResToggle = document.getElementById('mini-res-toggle');
-  const miniResSelect = document.getElementById('mini-res-select');
 
   const resSettingsContent = document.getElementById('res-settings-content');
   const fallbackResList = document.getElementById('fallback-res-list');
@@ -98,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addResBtn = document.getElementById('add-res-btn');
 
   // Load Settings
-  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution', 'miniPlayerResolution', 'enableMiniPlayerResolution'], (result) => {
+  chrome.storage.local.get(['isPinned', 'position', 'size', 'theme', 'lang', 'pinMode', 'freePosition', 'autoResolution', 'mainResolution', 'fallbackResolutions', 'playlistResolution', 'enablePlaylistResolution'], (result) => {
     let lang = result.lang;
     if (!lang) {
       const browserLang = navigator.language || navigator.userLanguage; 
@@ -122,9 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     playlistResToggle.checked = settings.enablePlaylistResolution;
     playlistResSelect.value = settings.playlistResolution;
-    
-    miniResToggle.checked = settings.enableMiniPlayerResolution;
-    miniResSelect.value = settings.miniPlayerResolution;
 
     currentFallbackList = settings.fallbackResolutions || [];
     renderFallbackList();
@@ -183,9 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   playlistResToggle.addEventListener('change', () => saveAndSync({ enablePlaylistResolution: playlistResToggle.checked }));
   playlistResSelect.addEventListener('change', () => saveAndSync({ playlistResolution: playlistResSelect.value }));
-  
-  miniResToggle.addEventListener('change', () => saveAndSync({ enableMiniPlayerResolution: miniResToggle.checked }));
-  miniResSelect.addEventListener('change', () => saveAndSync({ miniPlayerResolution: miniResSelect.value }));
 
   addResBtn.addEventListener('click', () => {
     const res = addResSelect.value;
